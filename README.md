@@ -42,6 +42,7 @@ npm test             # runs the unit tests (comparator + runner)
 npm run compare      # computes derived data for the reference fixture (step two)
 npm run play         # plays the reference case in the terminal (step three)
 npm run autosolve    # asserts the reference case is solvable by its intended path
+npm run bake         # Engine B: bakes performed dialogue for the case (needs ANTHROPIC_API_KEY)
 ```
 
 `npm run validate` prints a PASS line and exits 0 for the reference fixture.
@@ -407,15 +408,103 @@ now because finding them in text is the point of this step:
   rewards real discovery, but a thorough brute-forcer still reaches the answer.
   The intended counter is Engine B making blind probing costly and unpleasant.
 
-## Out of scope (steps two and three)
+## Step four: Engine B, the dialogue performer
+
+Engine B performs each claim's authored factual spine in character, so a witness
+sounds like a specific person from 1960s Los Angeles instead of reading a flat
+sentence, while remaining provably unable to say anything untrue to the case.
+
+Source lives under `src/engineB/`:
+
+| File | What it is |
+| --- | --- |
+| `traits.ts` | Trait vector to behavioral flags (pure, tested). The raw numbers never reach the model. |
+| `prompt.ts` | Prompt assembly with the hard constraints. |
+| `client.ts` | The Anthropic client behind a mockable `ModelClient` interface. Key and models from the environment. |
+| `guard.ts` | The leak verifier, regenerate-on-leak, and the spine fallback. |
+| `cache.ts` | The cache and the generated dialogue artifact (a sidecar file). |
+| `bake.ts` | Enumerates reachable lines, performs, guards, and stores them. |
+| `index.ts` | The `perform` function tying it together. |
+
+### Engine B is a voice, never a fact source
+
+This is the load-bearing rule. Engine B is handed the exact content to deliver
+(a claim's `factualSpine`) and performs it in character. It does not reason about
+the case, choose what is true, or decide whether to lie. When a claim is authored
+as a lie, the spine already contains the lie and Engine B delivers it
+convincingly without correcting it. Veracity, gating, budget, and scoring live in
+the bible and in `rules.ts`; Engine B touches none of them, and `personaRole`
+never even tells the model who is guilty (a perp, a suspect, and a framed agent
+are all just "a person of interest").
+
+The never-invent-facts property holds **by construction**, not by hope:
+
+1. The model is given the content to say, not asked to invent it.
+2. Every produced line is verified against the allowed slice (the claim content)
+   by a cheap verifier model that returns pass or fail with the offending span.
+3. A leaking line is regenerated with a tightened instruction, up to a configured
+   number of retries.
+4. If it still leaks, the guard ships the plain `factualSpine`, which by
+   definition cannot leak. So a leaking line is never shipped.
+
+### Bake at generation time, not at runtime
+
+The question menu is a finite gated set and each answer's content is already
+authored, so the complete set of producible lines is enumerable. `npm run bake`
+performs and validates every reachable line once, at generation time, and writes
+them to a sidecar dialogue artifact (`<case>.dialogue.json`, git-ignored). The
+runner and the eventual Unity runtime read baked lines and make no live model
+calls. The cache prevents duplicate work: re-running the bake reuses lines
+already present.
+
+**Cost note:** the bake cost is paid once per case at generation time. That is
+the point of doing it here rather than at runtime, where every play would
+otherwise pay for the same lines again.
+
+### Trait-to-flags translation
+
+`traits.ts` maps each hidden 0-to-100 trait to a plain behavioral flag about
+willingness and delivery, only at the tails (a high `authorityDeference` becomes
+"Defers to a detective's authority and answers fully when pressed"; a low
+`composure` becomes "Rattles easily and grows flustered under confrontation").
+Mid-range traits produce no flag, keeping the outliers meaningful. The raw
+numbers are never placed in the prompt. The Medical Examiner and District
+Attorney are exempt and perform through a fixed professional register, not trait
+translation.
+
+### Model configuration
+
+Set in the environment (see `.env.example`), with documented defaults in
+`config.ts`:
+
+- `ANTHROPIC_API_KEY` (required only for `npm run bake`; everything else is offline).
+- `ENGINE_B_PERFORMER_MODEL` (default `claude-opus-4-8`): performs the voice.
+- `ENGINE_B_VERIFIER_MODEL` (default `claude-haiku-4-5`): the cheaper, faster leak verifier.
+
+### Runner integration
+
+`npm run play` uses performed dialogue when a baked sidecar exists, and falls back
+to the plain spine otherwise. Type `mode raw` or `mode performed` in the REPL to
+toggle, or launch with `--raw` to force spines. `rules.ts` is unchanged: gating,
+budget, flagging, and scoring are exactly as in step three. Engine B only changes
+how an answer reads, never which answer is given or what it costs.
+
+### Tests
+
+`npm test` runs `src/engineB/engineB.test.ts` fully offline with a mocked client:
+the trait translator (and that no raw number is emitted), the leak verifier
+catching an out-of-slice assertion and passing a clean line, the spine fallback
+after repeated leaks (and that the runner uses it), a lie performed as the lie,
+delivery differing while the facts stay identical, the cache preventing duplicate
+calls, and the ME professional register. `integration.test.ts` bakes one real
+line and is skipped unless `ANTHROPIC_API_KEY` is set, so CI stays offline.
+
+## Out of scope (steps two, three, and four)
 
 The following belong to later steps and are deliberately **not** built here:
 
-- the dialogue layer (Engine B, step four) and any language-model or network
-  calls: the runner prints the authored `factualSpine`, it does not perform lines
-  in character;
-- the case generator (Engine A, step five): the runner reads one authored bible
-  and never generates content;
+- the case generator (Engine A, step five): this step runs against the hand
+  fixture and never generates case content;
 - any Unity, UI, or graphics (step six onward): the runner is text only and
   `rules.ts` carries no I/O so the port can mirror it;
 - the dramatized DA scene and the collusion higher bar (step ten), which reuse

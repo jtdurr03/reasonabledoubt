@@ -7,6 +7,7 @@
  */
 
 import type { CaseBible, Id } from "../types/caseBible.js";
+import type { DialogueProvider } from "../engineB/cache.js";
 import {
   type PlayerState,
   discoverClue,
@@ -102,7 +103,13 @@ export function doSearch(bible: CaseBible, state: PlayerState): ActionResult {
   return ok(messages);
 }
 
-export function doAsk(bible: CaseBible, state: PlayerState, characterId: Id, questionId: Id): ActionResult {
+export function doAsk(
+  bible: CaseBible,
+  state: PlayerState,
+  characterId: Id,
+  questionId: Id,
+  dialogue?: DialogueProvider,
+): ActionResult {
   const q = bible.questions.find((x) => x.questionId === questionId);
   if (!q) return fail(`No such question: ${questionId}.`);
   if (!canAsk(bible, state, characterId, q)) return fail(`That question is not available right now.`);
@@ -114,12 +121,19 @@ export function doAsk(bible: CaseBible, state: PlayerState, characterId: Id, que
   const messages: string[] = [];
   messages.push(`You ask: "${q.text}"`);
 
+  // Engine B (step four) only changes how an answer reads, never which answer is
+  // given. The factual spine is the fallback; a baked performed line replaces it
+  // for delivery when the dialogue artifact has one.
+  const stateKey = q.tier === 3 ? "confront" : "base";
   for (const claimId of q.effects?.revealsClaimIds ?? []) {
     if (hearClaim(state, claimId)) {
       const claim = claimById(bible, claimId);
       const spine = claim?.factualSpine ?? describeClaim(bible, claimId);
+      const performed = claim
+        ? dialogue?.getLine(claim.characterId, q.questionId, claimId, stateKey)
+        : undefined;
       const speaker = characterById(bible, claim?.characterId ?? "")?.name ?? "Witness";
-      const m = `${speaker}: "${spine}"`;
+      const m = `${speaker}: "${performed ?? spine}"`;
       messages.push(m);
       log(state, m);
     }

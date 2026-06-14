@@ -10,11 +10,13 @@
     "compare": "tsx src/comparator/cli.ts",
     "play": "tsx src/runner/cli.ts",
     "autosolve": "tsx src/runner/autosolve.ts",
+    "bake": "tsx src/engineB/bake.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "types:generate": "json2ts schema/case-bible.schema.json --output src/types/caseBible.generated.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.69.0",
     "ajv": "^8.17.1"
   },
   "devDependencies": {

@@ -15,6 +15,7 @@ import { pathToFileURL } from "node:url";
 import type { EvidenceRef, Id } from "../types/caseBible.js";
 import { loadCase, referenceFixturePath, repoRoot } from "./loadCase.js";
 import { initialState, log, type PlayerState } from "./state.js";
+import { loadArtifact, dialogueProvider, dialoguePathFor } from "../engineB/cache.js";
 import {
   doAsk,
   doLink,
@@ -37,8 +38,17 @@ import {
   type Accusation,
 } from "./rules.js";
 
-const bible = loadCase(process.argv[2] ? resolve(process.cwd(), process.argv[2]) : referenceFixturePath);
+const args = process.argv.slice(2).filter((a) => a !== "--raw");
+const rawFlag = process.argv.includes("--raw");
+const inputPath = args[0] ? resolve(process.cwd(), args[0]) : referenceFixturePath;
+const bible = loadCase(inputPath);
 const state = initialState(bible);
+
+// Engine B (step four): load baked performed dialogue if it exists. Default to
+// performed delivery when available; --raw forces the plain factual spines.
+const dialogueArtifact = loadArtifact(dialoguePathFor(inputPath));
+const dialogue = dialogueArtifact ? dialogueProvider(dialogueArtifact) : undefined;
+let performedMode = !rawFlag && dialogue !== undefined;
 
 const rl = createInterface({ input: process.stdin, output: process.stdout, terminal: false });
 
@@ -99,6 +109,7 @@ function showHelp(): void {
   out("  link <idA> <idB>     draw a link between two held nodes");
   out("  notebook             your clues, claims, and question budgets");
   out("  evidence             ids you can cite at conclusion");
+  out("  mode raw|performed   switch between plain spines and Engine B performed dialogue");
   out("  accuse               conclude the case (only at the Police Station)");
   out("  help / quit");
 }
@@ -237,6 +248,7 @@ function writeTranscript(): void {
 async function loop(): Promise<void> {
   out(`\n${bible.title}`);
   out(`A headless detective case. Type 'help' for commands.`);
+  out(`Dialogue: ${performedMode ? "performed (Engine B)" : "raw factual spines"}${dialogue ? "" : " (no baked dialogue; run 'npm run bake')"}.`);
   showLook();
 
   for (;;) {
@@ -263,7 +275,16 @@ async function loop(): Promise<void> {
           out(`That witness is not here.`);
           break;
         }
-        print(doAsk(bible, state, witness ?? "", args[0]).messages);
+        print(doAsk(bible, state, witness ?? "", args[0], performedMode ? dialogue : undefined).messages);
+        break;
+      }
+      case "mode": {
+        if (args[0] === "raw") performedMode = false;
+        else if (args[0] === "performed") {
+          if (!dialogue) out(`No baked dialogue found. Run 'npm run bake' first; staying in raw mode.`);
+          else performedMode = true;
+        }
+        out(`Dialogue mode: ${performedMode ? "performed (Engine B)" : "raw (factual spine)"}${dialogue ? "" : " [no baked dialogue available]"}.`);
         break;
       }
       case "flags": showFlags(); break;

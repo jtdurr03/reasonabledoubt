@@ -8,3 +8,7 @@ src/types/caseBible.generated.ts
 fixtures/*.enriched.json
 fixtures/*.report.md
 transcripts/
+
+# Engine B generated dialogue (regenerate with `npm run bake`) and secrets
+fixtures/*.dialogue.json
+.env
