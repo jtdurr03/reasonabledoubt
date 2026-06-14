@@ -8,6 +8,8 @@
     "validate": "tsx src/validate.ts",
     "validate:fail": "tsx src/validate.ts fixtures/corrupted-homicide.case.json",
     "compare": "tsx src/comparator/cli.ts",
+    "play": "tsx src/runner/cli.ts",
+    "autosolve": "tsx src/runner/autosolve.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "types:generate": "json2ts schema/case-bible.schema.json --output src/types/caseBible.generated.ts"

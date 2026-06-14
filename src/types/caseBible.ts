@@ -143,6 +143,13 @@ export interface Claim {
   /** Required when veracity is "mistaken": clue or ME fact id(s) that override it. */
   correctedBy?: Id[];
   narrativeRole?: NarrativeRole;
+  /**
+   * Plain authored sentence stating the claim's content as the witness's
+   * factual answer. The step-three runner prints this verbatim; the step-four
+   * dialogue model (Engine B) performs this spine in character. It is the
+   * factual spine, not the performance.
+   */
+  factualSpine?: string;
 }
 
 /* ------------------------------------------------------------------ */
@@ -333,6 +340,15 @@ export interface CollusionScoringRequirements {
  */
 export interface ScoringSpec {
   requiredEvidenceChain: EvidenceRef[];
+  /**
+   * The minimum core a winning accusation must cite, a subset of
+   * requiredEvidenceChain. Added in step three so the verdict scorer is
+   * deterministic: citing this core (with the strength hierarchy satisfied)
+   * wins, while the remaining requiredEvidenceChain items strengthen the case
+   * but are not strictly required. If absent, the scorer treats the full
+   * requiredEvidenceChain as the core.
+   */
+  minimumSufficientChain?: EvidenceRef[];
   sufficientChainRule: string;
   unexplainedContradictionRule: string;
   strengthHierarchy: string[];

@@ -38,8 +38,10 @@ npm install
 
 npm run validate     # validates the reference fixture; exits 0 on success
 npm run typecheck    # tsc --noEmit; exits 0 on success
-npm test             # runs the comparator unit tests (step two)
+npm test             # runs the unit tests (comparator + runner)
 npm run compare      # computes derived data for the reference fixture (step two)
+npm run play         # plays the reference case in the terminal (step three)
+npm run autosolve    # asserts the reference case is solvable by its intended path
 ```
 
 `npm run validate` prints a PASS line and exits 0 for the reference fixture.
@@ -326,21 +328,102 @@ thresholds, on the client.
   honest-mistake contradiction at a proportionate severity, and the decoupling
   test for the small lie.
 
-## Out of scope for this step
+## Step three: the headless runner
 
-The comparator is pure functions plus a CLI over bible data. It computes
-distance, severity, and the structural corroboration and contradiction data, and
-it reads authored veracity tags only to classify corroboration. The following
-belong to later steps and are deliberately **not** built here:
+A terminal REPL over one enriched bible. It is the first playable prototype and
+the canonical specification of the runtime rules that Unity will mirror in C#.
+The full rule contract is in [RULES.md](RULES.md); the rules themselves live in
+`src/runner/rules.ts` with no terminal I/O.
 
-- the headless case runner or any game-flow logic (step 3),
-- the case generator (Engine A, step 5),
-- the dialogue layer (Engine B),
-- any language-model or network calls,
-- any Unity or UI code,
-- the DA scoring runtime (step 10): `scoringSpec` is a stored specification and
-  the corroboration classification is data for that future scorer, not a scorer.
+| File | What it is |
+| --- | --- |
+| `src/runner/state.ts` | Player state model and low-level transitions. |
+| `src/runner/rules.ts` | The pure runtime rules: availability, budget, the relevance bonus, flag visibility, timeline conflicts, and the verdict scorer. No I/O. |
+| `src/runner/actions.ts` | Orchestration: composes rules and state into player actions, returning messages. |
+| `src/runner/cli.ts` | The interactive terminal interface. The only file with I/O. |
+| `src/runner/autosolve.ts` | Drives the engine along SOLUTION.md and asserts a win. |
+| `src/runner/loadCase.ts` | Loads a bible and ensures it carries the comparator's derived data. |
 
-The comparator does not decide guilt, does not score cases, and does not perform
-game flow. If a change starts to decide whether the player wins, it has left
-scope.
+### Run commands
+
+```sh
+npm run play         # interactive, on the reference fixture
+npm run autosolve    # the solvability assertion (also runs under npm test)
+```
+
+In `play`, type `help` for commands: `look`, `map`, `go`, `search`, `talk`,
+`ask`, `flags`, `timeline`, `place`, `board`, `link`, `notebook`, `evidence`,
+`accuse`, `quit`. The session transcript is written to `transcripts/` on exit.
+
+What the runner does and does not do: it reads the baked contradiction matrix and
+corroboration map and only decides visibility, availability, budget, and the
+verdict. It does not compute distances (the comparator did), does not decide
+veracity (the truth layer did, via `Claim.veracity`), and does not perform
+witness lines in character (that is step four; answers here are the authored
+`Claim.factualSpine` printed plainly).
+
+### Schema and type additions in this step
+
+- `Claim.factualSpine` (optional string): the plain authored sentence the runner
+  prints as the witness's answer and Engine B will later perform.
+- `ScoringSpec.minimumSufficientChain` (optional): the minimum core a winning
+  accusation must cite, a subset of `requiredEvidenceChain`, so the verdict is
+  deterministic. If absent, the full `requiredEvidenceChain` is the core.
+
+### The verdict scorer is the canonical scorer
+
+`scoreVerdict` in `rules.ts` is a pure function. It checks the accused against
+the resolution, the cited chain against `minimumSufficientChain`, the strength
+hierarchy (a chain must rest on at least one physical or ME item), and unexplained
+perp lies. Step ten wraps it with DA dialogue and the collusion higher bar,
+reusing this logic.
+
+### Playtesting notes (what the text prototype reveals about the loop)
+
+Playing the reference case repeatedly through the CLI surfaced these, recorded
+now because finding them in text is the point of this step:
+
+- **The interview is on rails.** Because willingness is fully encoded in the
+  authored question tree and traits are deliberately ignored here, every witness
+  answers flatly and the "right" path is the only path. This is expected: the
+  flavor and friction are Engine B's job (step four). The loop's spine works,
+  but it is not yet fun on its own.
+- **The 8-minute call-time lie is barely felt.** It flags faint and the player
+  can win without ever resolving it (the verdict reports it as unexplained but
+  still passes). That is the intended magnitude-versus-veracity decoupling, but
+  it shows that small lies need a reason to matter, otherwise players will learn
+  to ignore faint flags. A future step could let small lies chain into a larger
+  inconsistency.
+- **The clue board is currently inert to scoring.** Links are recorded and
+  marked supported or not, but the verdict reads the cited chain directly, not
+  the board. The board is a thinking aid, not yet a mechanic. Worth deciding in a
+  later step whether the board should feed the accusation automatically.
+- **Citing is fiddly in text.** The player types evidence ids by hand at
+  conclusion. In Unity this becomes drag-from-board, so the friction is a
+  terminal artifact, not a design flaw. Noted so the port does not preserve it.
+- **It is mildly gameable by exhaustion.** With enough budget a player can ask
+  every available question without reasoning, since asking is the only way to
+  reveal claims. The gating and budget limit this, and the relevance bonus
+  rewards real discovery, but a thorough brute-forcer still reaches the answer.
+  The intended counter is Engine B making blind probing costly and unpleasant.
+
+## Out of scope (steps two and three)
+
+The following belong to later steps and are deliberately **not** built here:
+
+- the dialogue layer (Engine B, step four) and any language-model or network
+  calls: the runner prints the authored `factualSpine`, it does not perform lines
+  in character;
+- the case generator (Engine A, step five): the runner reads one authored bible
+  and never generates content;
+- any Unity, UI, or graphics (step six onward): the runner is text only and
+  `rules.ts` carries no I/O so the port can mirror it;
+- the dramatized DA scene and the collusion higher bar (step ten), which reuse
+  this step's `scoreVerdict` rather than replacing it.
+
+The comparator computes distance, severity, and the structural corroboration and
+contradiction data, reading authored veracity only to classify corroboration. The
+runner decides visibility, availability, budget, and the verdict. Neither
+reimplements the other: the runner reads the comparator's baked outputs. If a
+change starts to recompute comparisons in the runner, or to perform witness lines
+in character, it has left scope.

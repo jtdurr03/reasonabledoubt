@@ -7,3 +7,4 @@ src/types/caseBible.generated.ts
 # Computed comparator output (regenerate with `npm run compare`)
 fixtures/*.enriched.json
 fixtures/*.report.md
+transcripts/

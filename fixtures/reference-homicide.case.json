@@ -237,14 +237,16 @@
       "characterId": "CH_dolores",
       "factId": "F_dolores_departure",
       "statedValue": { "kind": "point", "at": "21:15" },
-      "veracity": "truthful"
+      "veracity": "truthful",
+      "factualSpine": "I locked the front door and left at a quarter past nine."
     },
     {
       "claimId": "CL_etta_seedolores",
       "characterId": "CH_etta",
       "factId": "F_dolores_departure",
       "statedValue": { "kind": "point", "at": "21:15" },
-      "veracity": "truthful"
+      "veracity": "truthful",
+      "factualSpine": "I saw Dolores lock up and leave, around a quarter past nine."
     },
     {
       "claimId": "CL_dolores_backdoor",
@@ -252,7 +254,8 @@
       "factId": "F_backdoor_state",
       "statedValue": { "category": "door", "subtype": "back alley door", "attributes": { "state": "locked" } },
       "veracity": "mistaken",
-      "correctedBy": ["C_backdoor_latch"]
+      "correctedBy": ["C_backdoor_latch"],
+      "factualSpine": "The back alley door was locked, same as always."
     },
     {
       "claimId": "CL_sid_departtime",
@@ -260,14 +263,16 @@
       "factId": "F_sid_presence",
       "statedValue": { "kind": "point", "at": "21:00" },
       "veracity": "lie",
-      "refutedBy": ["C_pawnticket"]
+      "refutedBy": ["C_pawnticket"],
+      "factualSpine": "I was gone by nine. Nowhere near the place after that."
     },
     {
       "claimId": "CL_sid_sawcar",
       "characterId": "CH_sid",
       "factId": "F_webb_presence",
       "statedValue": { "kind": "point", "at": "21:55" },
-      "veracity": "truthful"
+      "veracity": "truthful",
+      "factualSpine": "All right. Around five to ten I saw Webb's Buick parked in the alley."
     },
     {
       "claimId": "CL_etta_crashtime",
@@ -275,7 +280,8 @@
       "factId": "F_crash_time",
       "statedValue": { "kind": "point", "at": "23:00" },
       "veracity": "mistaken",
-      "correctedBy": ["F_tod", "C_stopped_watch"]
+      "correctedBy": ["F_tod", "C_stopped_watch"],
+      "factualSpine": "I heard a crash from the shop, near eleven o'clock I would say."
     },
     {
       "claimId": "CL_webb_alibi",
@@ -283,7 +289,8 @@
       "factId": "F_webb_location_tod",
       "statedValue": { "district": "Westlake", "building": "Tiki Room", "room": "bar" },
       "veracity": "lie",
-      "refutedBy": ["C_bottle_prints", "F_tod"]
+      "refutedBy": ["C_bottle_prints", "F_tod"],
+      "factualSpine": "I was at the Tiki Room over in Westlake all evening."
     },
     {
       "claimId": "CL_webb_alibi_time",
@@ -291,7 +298,8 @@
       "factId": "F_tod",
       "statedValue": { "kind": "point", "at": "19:15" },
       "veracity": "lie",
-      "refutedBy": ["C_bottle_prints", "F_webb_presence"]
+      "refutedBy": ["C_bottle_prints", "F_webb_presence"],
+      "factualSpine": "The only time I was near the shop was around quarter past seven, long before any of this."
     },
     {
       "claimId": "CL_webb_calltime",
@@ -299,7 +307,8 @@
       "factId": "F_webb_call_time",
       "statedValue": { "kind": "point", "at": "21:08" },
       "veracity": "lie",
-      "refutedBy": ["C_phone_slip"]
+      "refutedBy": ["C_phone_slip"],
+      "factualSpine": "I telephoned Leo about ten past nine to set up the meeting."
     },
     {
       "claimId": "CL_webb_debt_denial",
@@ -307,28 +316,32 @@
       "factId": "F_webb_debt",
       "statedValue": { "relationType": "no debt", "fromCharacterId": "CH_webb", "toCharacterId": "CH_leo" },
       "veracity": "lie",
-      "refutedBy": ["C_ledger_debt"]
+      "refutedBy": ["C_ledger_debt"],
+      "factualSpine": "Leo and I were square. I did not owe him a dime."
     },
     {
       "claimId": "CL_me_tod",
       "characterId": "CH_me",
       "factId": "F_tod",
       "statedValue": { "kind": "window", "start": "21:45", "end": "22:30" },
-      "veracity": "truthful"
+      "veracity": "truthful",
+      "factualSpine": "Time of death falls between nine forty-five and ten thirty."
     },
     {
       "claimId": "CL_me_cause",
       "characterId": "CH_me",
       "factId": "F_cause",
       "statedValue": { "eventType": "cause of death", "description": "blunt force trauma to the head" },
-      "veracity": "truthful"
+      "veracity": "truthful",
+      "factualSpine": "Cause of death is blunt force trauma to the head."
     },
     {
       "claimId": "CL_me_defensive",
       "characterId": "CH_me",
       "factId": "F_defensive",
       "statedValue": { "count": 2, "of": "defensive bruises on the victim's forearms" },
-      "veracity": "truthful"
+      "veracity": "truthful",
+      "factualSpine": "Two defensive bruises on the forearms. He fought back. This was no accident and no suicide."
     }
   ],
 
@@ -601,6 +614,13 @@
       { "kind": "fact", "id": "F_webb_presence" },
       { "kind": "clue", "id": "C_ledger_debt" },
       { "kind": "fact", "id": "F_webb_debt" }
+    ],
+    "minimumSufficientChain": [
+      { "kind": "fact", "id": "F_defensive" },
+      { "kind": "fact", "id": "F_cause" },
+      { "kind": "fact", "id": "F_tod" },
+      { "kind": "clue", "id": "C_bottle_prints" },
+      { "kind": "fact", "id": "F_webb_location_tod" }
     ],
     "sufficientChainRule": "A sufficient accusation of Marcus Webb must establish that this was a homicide (F_defensive plus F_cause rule out accident, suicide, and natural causes), then place Webb at the scene during the ME time-of-death window (F_tod) using physical evidence (C_bottle_prints on the murder weapon, ideally reinforced by F_webb_presence via Sid's corrected sighting once C_pawnticket breaks his lie), and cite motive (F_webb_debt via C_ledger_debt). The prints on the weapon together with the time-of-death window are the minimum sufficient core; the Sid sighting and the debt strengthen the case but the core alone carries it.",
     "unexplainedContradictionRule": "Every contradiction left unresolved at accusation counts against the case. Webb's alibi (CL_webb_alibi) must be broken by C_bottle_prints together with F_tod, or his Tiki Room story stands and the accusation fails. Sid's lie (CL_sid_departtime) should be cracked with C_pawnticket, since an unbroken lie keeps the 21:55 sighting hidden. Etta's mistaken time (CL_etta_crashtime) must be corrected to F_tod, or her 23:00 account spuriously argues for a death outside the window.",

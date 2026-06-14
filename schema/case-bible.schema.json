@@ -474,7 +474,8 @@
           "items": { "$ref": "#/$defs/id" },
           "minItems": 1
         },
-        "narrativeRole": { "$ref": "#/$defs/narrativeRole", "description": "Collusion only: surface or deep narrative this claim serves." }
+        "narrativeRole": { "$ref": "#/$defs/narrativeRole", "description": "Collusion only: surface or deep narrative this claim serves." },
+        "factualSpine": { "type": "string", "description": "Plain authored sentence stating the claim's content as the witness's factual answer. The step-three runner prints this verbatim; the step-four dialogue model performs it in character. The factual spine, not the performance." }
       },
       "allOf": [
         {
@@ -771,6 +772,12 @@
         "requiredEvidenceChain": {
           "type": "array",
           "description": "The facts and clues a correct accusation must cite. Order is the intended logical chain.",
+          "items": { "$ref": "#/$defs/evidenceRef" },
+          "minItems": 1
+        },
+        "minimumSufficientChain": {
+          "type": "array",
+          "description": "The minimum core a winning accusation must cite, a subset of requiredEvidenceChain. Added in step three for a deterministic verdict: citing this core (with the strength hierarchy satisfied) wins; the remaining requiredEvidenceChain items strengthen but are not strictly required. If absent, the scorer treats the full requiredEvidenceChain as the core.",
           "items": { "$ref": "#/$defs/evidenceRef" },
           "minItems": 1
         },
