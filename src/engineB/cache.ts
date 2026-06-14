@@ -54,7 +54,8 @@ export function saveArtifact(path: string, artifact: DialogueArtifact): void {
 
 /** The sidecar path for a bible file: <stem>.dialogue.json next to it. */
 export function dialoguePathFor(biblePath: string): string {
-  return biblePath.replace(/\.case\.json$/, ".dialogue.json").replace(/\.json$/, ".dialogue.json");
+  if (biblePath.endsWith(".case.json")) return biblePath.replace(/\.case\.json$/, ".dialogue.json");
+  return biblePath.replace(/\.json$/, ".dialogue.json");
 }
 
 /**

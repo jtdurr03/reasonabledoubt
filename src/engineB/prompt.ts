@@ -67,7 +67,8 @@ export function assemblePrompt(ctx: PromptContext): AssembledPrompt {
     `3. If the content is evasive, incomplete, or false, deliver it as written. Do not correct it, do not hedge it toward the truth, and do not break character to signal that it is false.`,
     `4. Stay in 1960s Los Angeles register. No anachronisms.`,
     `5. Keep it to a believable spoken length: one to three sentences.`,
-    `6. Output only the spoken line itself. No narration, no quotation marks, no stage directions, no preamble.`,
+    `6. Use no em-dashes and no en-dashes anywhere. Use commas, periods, or parentheses instead.`,
+    `7. Output only the spoken line itself. No narration, no quotation marks, no stage directions, no preamble.`,
   ].join("\n");
 
   const userLines = [
