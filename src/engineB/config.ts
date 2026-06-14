@@ -7,11 +7,11 @@
  * model runs the leak verifier. See .env.example.
  */
 
-// Character chat pulls run on Haiku (fast and cheap). Haiku 4.5 does not accept
-// the effort parameter, so "low effort" is achieved by keeping thinking off and
-// the token caps tight rather than by passing output_config.effort. Opus 4.8 is
-// reserved for the case-bible build (Engine A, step five), not dialogue.
-export const PERFORMER_MODEL = process.env.ENGINE_B_PERFORMER_MODEL ?? "claude-haiku-4-5";
+// Character chat pulls run on Sonnet 4.6 for a more distinct, audibly different
+// voice across witnesses, while the cheap Haiku verifier keeps the leak check
+// inexpensive. Opus 4.8 is reserved for the case-bible build (Engine A, step
+// five), not dialogue.
+export const PERFORMER_MODEL = process.env.ENGINE_B_PERFORMER_MODEL ?? "claude-sonnet-4-6";
 export const VERIFIER_MODEL = process.env.ENGINE_B_VERIFIER_MODEL ?? "claude-haiku-4-5";
 
 /** Max tokens for a single performed line (a believable spoken length). */
