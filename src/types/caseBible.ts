@@ -366,6 +366,61 @@ export type Resolution =
     };
 
 /* ------------------------------------------------------------------ */
+/* Derived data (computed output, written by the step-two comparator)  */
+/* ------------------------------------------------------------------ */
+
+/** Severity band of a comparison. */
+export type Band = "agreement" | "minor" | "moderate" | "major";
+
+/** Whether a compared source is a claim, a clue, or a fact (an ME finding). */
+export type SourceKind = "claim" | "clue" | "fact";
+
+/** One pairwise comparison in the contradiction matrix. */
+export interface ContradictionEntry {
+  factId: Id;
+  type: FactType;
+  sourceA: Id;
+  sourceAKind: SourceKind;
+  sourceB: Id;
+  sourceBKind: SourceKind;
+  rawDistance: number;
+  severity: number;
+  band: Band;
+}
+
+/** Hidden corroboration classification, derived from authored veracity. */
+export type CorroborationClass = "genuine" | "mistakenConsensus" | "collusive";
+
+export interface CorroborationMember {
+  sourceId: Id;
+  kind: SourceKind;
+}
+
+export interface CorroborationPair {
+  a: Id;
+  b: Id;
+  severity: number;
+  band: Band;
+}
+
+/** One fact's computed corroboration result. */
+export interface CorroborationResult {
+  factId: Id;
+  members: CorroborationMember[];
+  pairs: CorroborationPair[];
+  corroborated: boolean;
+  classification: CorroborationClass;
+}
+
+/** The derived section written into the bible by the comparator. Computed output. */
+export interface DerivedData {
+  generatedBy: string;
+  comparatorVersion: string;
+  contradictionMatrix: ContradictionEntry[];
+  corroboration: CorroborationResult[];
+}
+
+/* ------------------------------------------------------------------ */
 /* Root                                                                */
 /* ------------------------------------------------------------------ */
 
@@ -389,4 +444,6 @@ export interface CaseBible {
   corroborationMap: CorroborationEntry[];
   meReport?: MEReport;
   scoringSpec: ScoringSpec;
+  /** Computed output from the step-two comparator. Absent until it has run. */
+  derived?: DerivedData;
 }

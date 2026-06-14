@@ -38,6 +38,8 @@ npm install
 
 npm run validate     # validates the reference fixture; exits 0 on success
 npm run typecheck    # tsc --noEmit; exits 0 on success
+npm test             # runs the comparator unit tests (step two)
+npm run compare      # computes derived data for the reference fixture (step two)
 ```
 
 `npm run validate` prints a PASS line and exits 0 for the reference fixture.
@@ -217,18 +219,128 @@ the fact it references" or "this split-evidence clue's location is
 `mandatoryPass`"). Those live in `src/validate.ts` pass 2, are listed above, and
 are documented on the relevant schema fields.
 
+## Step two: the comparator
+
+The comparator measures the distance between two values about the same fact and
+maps that distance to a normalized severity and a band. Corroboration and
+contradiction are the same operation read from opposite ends: a small distance
+reads as agreement (corroboration), a large distance reads as contradiction, and
+the middle is graded. It is one comparator, not two systems.
+
+Source lives under `src/comparator/`:
+
+| File | What it is |
+| --- | --- |
+| `metrics/{time,location,count,identity,object,event,relationship}.ts` | One distance metric per fact type. |
+| `config.ts` | Every tolerance and severity threshold, in one place, each documented. |
+| `classify.ts` | The shared rawDistance to (severity, band) mapping. |
+| `index.ts` | `compare`, `computeContradictionMatrix`, `computeCorroborationMap`, `computeDerived`. |
+| `cli.ts` | Loads a bible, computes derived data, writes the enriched bible plus a readable report, and re-validates. |
+
+### Run command
+
+```sh
+npm run compare                       # the reference fixture
+npm run compare -- path/to/x.case.json
+```
+
+It writes `<input>.enriched.json` (the bible with a `derived` block) and
+`<input>.report.md`, then confirms the enriched bible still validates against
+the schema. These two outputs are computed artifacts and are git-ignored;
+regenerate them with `npm run compare`.
+
+### The per-type metrics
+
+Every metric returns `{ rawDistance, severity, band }`. `rawDistance` is in the
+metric's natural unit, `severity` is normalized 0.0 (identical) to 1.0
+(maximally far), and `band` is one of agreement, minor, moderate, major. All
+thresholds live in `config.ts`.
+
+- **time** is continuous, in minutes on the 24-hour clock. Point-to-point is
+  absolute minutes apart; point-to-window is 0 inside the window, else minutes
+  to the nearest edge; window-to-window is 0 on overlap, else the gap. A few
+  minutes is agreement, tens of minutes minor, around an hour moderate, multiple
+  hours major. Midnight-wrapping windows are out of scope for this version (the
+  game's cases run within an evening).
+- **location** is hierarchical over district contains building contains room.
+  rawDistance is the climb to the lowest common ancestor: same room 0, same
+  building 1, same district 2, different district 3.
+- **count** is numeric. The default mode is absolute difference, which matches
+  the project's examples directly (off-by-one is minor, two versus six is
+  major). A proportional mode is provided in config for large-count cases and is
+  not the default.
+- **identity** is categorical with fuzzy edges. Same character ref is 0,
+  different refs is a hard conflict. Descriptors compare by a weighted sum of
+  attribute mismatches, with hard attributes (sex, an incompatible height band)
+  weighted so any single one is major: a tall man does not match a short woman.
+  A bare descriptor compared against a character reference cannot be resolved by
+  a pure value metric (the character's attributes are not in the value), so it
+  returns a moderate "cannot confirm" distance.
+- **object** is category first, then subtype, then attributes. Different
+  category is major; same category and different subtype is minor to moderate;
+  same category and subtype is near 0.
+- **event** and **relationship** are intentionally coarse in this version. event
+  compares type and description; relationship compares relation type and the two
+  parties. They return a sensible band and are flagged here as deliberately
+  simple, to be deepened in a later step.
+
+### Magnitude versus veracity: why the comparator never infers one from the other
+
+This is the load-bearing rule. **Magnitude drives only the visual severity of a
+flag. It never decides whether a discrepancy is a lie or an honest mistake.**
+That classification lives in the bible's authored `Claim.veracity` tag, written
+by the truth layer.
+
+In code this is enforced structurally: no metric, and nothing in `compare`, ever
+receives a veracity. Metrics take values only. Veracity is read in exactly one
+place, `classifyCorroboration`, and only to label an agreement that distance has
+already found (genuine, mistakenConsensus, or collusive). A small lie and a small
+honest slip produce the identical distance, severity, and band, and the
+comparator treats them identically. The reference fixture plants an eight-minute
+lie (`CL_webb_calltime`) precisely to prove this: it lands in the minor band, yet
+it is and stays a lie purely from its tag. See the decoupling test in
+`src/comparator/fixture.test.ts`.
+
+The hidden corroboration classification is for the later DA scorer only. It is
+never shown to the player or the dialogue runtime.
+
+### Why it runs at generation time, not in Unity
+
+The comparator is pure, deterministic functions over bible data. Running it once
+at case-generation time bakes the contradiction matrix and corroboration map
+into the shipped bible as the `derived` block. The Unity runtime then reads those
+precomputed results and never reimplements a comparison. That keeps the bible the
+single source of truth (the runtime cannot drift from or contradict it), makes
+the results trivially testable server-side, and keeps no comparison logic, and no
+thresholds, on the client.
+
+### Tests
+
+`npm test` runs the suite in `src/comparator/`:
+
+- `metrics.test.ts`: per-type unit tests for time, location, count, identity, and
+  object, each at agreement, a middle band, and major, plus the dispatch and the
+  incomparable (mismatched types return an explicit result, never throw) tests.
+- `fixture.test.ts`: the planted-target tests against the reference fixture, the
+  time alibi major contradiction, the genuine two-witness corroboration, the
+  honest-mistake contradiction at a proportionate severity, and the decoupling
+  test for the small lie.
+
 ## Out of scope for this step
 
-The following belong to later steps and are deliberately **not** built here:
+The comparator is pure functions plus a CLI over bible data. It computes
+distance, severity, and the structural corroboration and contradiction data, and
+it reads authored veracity tags only to classify corroboration. The following
+belong to later steps and are deliberately **not** built here:
 
-- the type-aware distance comparator for corroboration and contradiction,
-- the headless case runner (step 3),
-- the case generator (Engine A),
+- the headless case runner or any game-flow logic (step 3),
+- the case generator (Engine A, step 5),
 - the dialogue layer (Engine B),
 - any language-model or network calls,
 - any Unity or UI code,
-- any scoring runtime (the `scoringSpec` is a stored specification, not an
-  executable scorer).
+- the DA scoring runtime (step 10): `scoringSpec` is a stored specification and
+  the corroboration classification is data for that future scorer, not a scorer.
 
-This step is schema and fixture only. If a change starts to add comparison logic
-or game flow, it has left the scope of step one.
+The comparator does not decide guilt, does not score cases, and does not perform
+game flow. If a change starts to decide whether the player wins, it has left
+scope.

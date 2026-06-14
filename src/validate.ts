@@ -16,7 +16,7 @@
  */
 
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, resolve } from "node:path";
 // Ajv ships CommonJS with a self-referential default export (module.exports
 // and module.exports.default are the same class). NodeNext + tsc cannot model
@@ -45,14 +45,23 @@ import type {
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, "..");
 
-const schemaPath = resolve(repoRoot, "schema/case-bible.schema.json");
+export const schemaPath = resolve(repoRoot, "schema/case-bible.schema.json");
 const defaultFixture = resolve(repoRoot, "fixtures/reference-homicide.case.json");
-const fixturePath = process.argv[2]
-  ? resolve(process.cwd(), process.argv[2])
-  : defaultFixture;
 
-function loadJson(path: string): unknown {
+export function loadJson(path: string): unknown {
   return JSON.parse(readFileSync(path, "utf8"));
+}
+
+/**
+ * Validate a bible object against the schema and the cross-object invariants.
+ * Returns a (possibly empty) list of human-readable errors. Reusable by other
+ * tools (for example the comparator CLI) without spawning a process.
+ */
+export function validateBible(data: unknown): string[] {
+  const schema = loadJson(schemaPath) as object;
+  const schemaErrs = schemaErrors(schema, data);
+  if (schemaErrs.length > 0) return schemaErrs;
+  return semanticErrors(data as CaseBible);
 }
 
 /* ----------------------------------------------------------------- */
@@ -287,6 +296,9 @@ function semanticErrors(bible: CaseBible): string[] {
 
 function main(): void {
   const schema = loadJson(schemaPath) as object;
+  const fixturePath = process.argv[2]
+    ? resolve(process.cwd(), process.argv[2])
+    : defaultFixture;
   const data = loadJson(fixturePath);
 
   console.log(`Validating ${fixturePath}`);
@@ -311,4 +323,7 @@ function main(): void {
   process.exit(1);
 }
 
-main();
+// Run the CLI only when invoked directly, not when imported as a module.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main();
+}

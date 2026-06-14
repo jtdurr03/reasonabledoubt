@@ -66,10 +66,42 @@ character's knowledge is fixed by their `knowledgeSlice`.
 | `CL_sid_departtime` | Sid | `F_sid_presence` | left by 21:00 | **lie** | `C_pawnticket` (pawn stamp at 21:48) |
 | `CL_sid_sawcar` | Sid | `F_webb_presence` | saw Webb's car at 21:55 | truthful | matches the fact (revealed only after the lie is cracked) |
 | `CL_webb_alibi` | Webb | `F_webb_location_tod` | at the Tiki Room | **lie** | `C_bottle_prints` plus `F_tod` |
+| `CL_webb_alibi_time` | Webb | `F_tod` | only there at 19:15 | **lie** | `C_bottle_prints` plus `F_webb_presence` |
+| `CL_webb_calltime` | Webb | `F_webb_call_time` | called at 21:08 | **lie** (small) | `C_phone_slip` (slip stamped 21:00) |
 | `CL_webb_debt_denial` | Webb | `F_webb_debt` | owed nothing | **lie** | `C_ledger_debt` |
 | `CL_me_tod` | ME | `F_tod` | 21:45 to 22:30 | truthful | reliable narrator |
 | `CL_me_cause` | ME | `F_cause` | blunt force trauma | truthful | reliable narrator |
 | `CL_me_defensive` | ME | `F_defensive` | two defensive bruises | truthful | reliable narrator |
+
+### Two claims added in step two (the comparator)
+
+Step two added two claims (and a supporting fact and clue) so the comparator
+has clean targets, per the step-two task. Both are documented here as part of
+the ground truth.
+
+- **`CL_webb_alibi_time` (the time alibi).** Webb's location alibi
+  (`CL_webb_alibi`, "I was at the Tiki Room") is a location-typed claim, so on
+  its own it produces a location contradiction, not a time one. To give the
+  comparator the planted time contradiction the project calls for, Webb also
+  makes a time-typed claim that bears on the ME time-of-death window `F_tod`:
+  he insists the only time he was near the shop was 19:15, well before the
+  21:45 to 22:30 window. Compared against the ME window (and against Sid's 21:55
+  sighting and the prints), this is a roughly 150-minute gap that the comparator
+  flags major. New supporting truth: `F_webb_presence` already existed (Webb's
+  car at 21:55); the prints `C_bottle_prints` and that presence refute it.
+
+- **`CL_webb_calltime` (the small lie).** The original fixture's smallest lie
+  (`CL_sid_departtime`) is 48 minutes off, which lands moderate, not small. The
+  decoupling test needs a lie whose magnitude is genuinely small. Webb claims he
+  telephoned Leo at 21:08 when the message slip (`C_phone_slip`, new clue) and
+  the truth `F_webb_call_time` (new fact) both put the call at 21:00. The lie is
+  eight minutes, which the comparator reads as a minor contradiction. Webb shades
+  the time deliberately, to line the call up with a doorman who could place him
+  elsewhere near that minute. It is a deliberate falsehood, not a slip. Its
+  `veracity` is `lie` by authorship, and the comparator must keep treating it as
+  a lie from that tag alone, never upgrading or downgrading it because eight
+  minutes is small. An honest slip of the same eight minutes would produce the
+  identical distance, band, and severity.
 
 Note that magnitude of divergence does not determine veracity. Sid's lie moves
 his departure by only 48 minutes, while Etta's honest mistake is off by about

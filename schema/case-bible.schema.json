@@ -94,10 +94,109 @@
     },
     "scoringSpec": {
       "$ref": "#/$defs/scoringSpec"
+    },
+    "derived": {
+      "$ref": "#/$defs/derived",
+      "description": "COMPUTED OUTPUT, not authored input. Written by the step-two comparator at case-generation time. Clearly separated from the authored fields above. The Unity runtime reads these precomputed results and never recomputes comparisons. Absent until the comparator has run."
     }
   },
 
   "$defs": {
+
+    "band": {
+      "type": "string",
+      "description": "Severity band of a comparison. agreement is close enough to read as the same statement, major is clearly in conflict, minor and moderate are the graded middle.",
+      "enum": ["agreement", "minor", "moderate", "major"]
+    },
+
+    "sourceKind": {
+      "type": "string",
+      "description": "Whether a compared source is a claim, a clue, or a fact (an ME finding).",
+      "enum": ["claim", "clue", "fact"]
+    },
+
+    "derived": {
+      "type": "object",
+      "description": "Comparator-computed derived data baked into the shipped bible. Computed output, never hand-authored.",
+      "additionalProperties": false,
+      "required": ["generatedBy", "comparatorVersion", "contradictionMatrix", "corroboration"],
+      "properties": {
+        "generatedBy": { "type": "string", "description": "Tool that produced this block.", "minLength": 1 },
+        "comparatorVersion": { "type": "string", "description": "Comparator semantics version, so stale derived data is detectable.", "minLength": 1 },
+        "contradictionMatrix": {
+          "type": "array",
+          "description": "Every claim-involving pairwise comparison, grouped implicitly by factId. The Unity timeline reads this to auto-flag conflicts, revealing each entry only once the player holds both sources (a runtime concern the comparator does not handle).",
+          "items": { "$ref": "#/$defs/contradictionEntry" }
+        },
+        "corroboration": {
+          "type": "array",
+          "description": "Per-fact corroboration result: the agreeing sources, whether the fact is corroborated, and a hidden classification derived from authored veracity (never from distance). Visible to the later DA scorer only.",
+          "items": { "$ref": "#/$defs/corroborationResult" }
+        }
+      }
+    },
+
+    "contradictionEntry": {
+      "type": "object",
+      "description": "One pairwise comparison between two sources that bear on the same fact.",
+      "additionalProperties": false,
+      "required": ["factId", "type", "sourceA", "sourceAKind", "sourceB", "sourceBKind", "rawDistance", "severity", "band"],
+      "properties": {
+        "factId": { "$ref": "#/$defs/id", "description": "The fact both sources bear on." },
+        "type": { "$ref": "#/$defs/factType", "description": "The shared fact type the comparison used." },
+        "sourceA": { "$ref": "#/$defs/id", "description": "First source id (claim, clue, or fact)." },
+        "sourceAKind": { "$ref": "#/$defs/sourceKind", "description": "Kind of the first source." },
+        "sourceB": { "$ref": "#/$defs/id", "description": "Second source id." },
+        "sourceBKind": { "$ref": "#/$defs/sourceKind", "description": "Kind of the second source." },
+        "rawDistance": { "type": "number", "description": "Distance in the metric's natural unit (minutes, tree steps, count difference, weighted mismatch).", "minimum": 0 },
+        "severity": { "type": "number", "description": "Normalized 0.0 (identical) to 1.0 (maximally far).", "minimum": 0, "maximum": 1 },
+        "band": { "$ref": "#/$defs/band", "description": "Band the rawDistance falls into." }
+      }
+    },
+
+    "corroborationResult": {
+      "type": "object",
+      "description": "Computed corroboration for one fact. The classification is hidden, derived from authored veracity, and never inferred from distance.",
+      "additionalProperties": false,
+      "required": ["factId", "members", "pairs", "corroborated", "classification"],
+      "properties": {
+        "factId": { "$ref": "#/$defs/id", "description": "The fact these sources bear on." },
+        "members": {
+          "type": "array",
+          "description": "Sources that agree with at least one other source on this fact.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["sourceId", "kind"],
+            "properties": {
+              "sourceId": { "$ref": "#/$defs/id" },
+              "kind": { "$ref": "#/$defs/sourceKind" }
+            }
+          }
+        },
+        "pairs": {
+          "type": "array",
+          "description": "The agreeing pairs that produced the corroboration.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["a", "b", "severity", "band"],
+            "properties": {
+              "a": { "$ref": "#/$defs/id" },
+              "b": { "$ref": "#/$defs/id" },
+              "severity": { "type": "number", "minimum": 0, "maximum": 1 },
+              "band": { "$ref": "#/$defs/band" }
+            }
+          }
+        },
+        "corroborated": { "type": "boolean", "description": "True when two independent claims agree, or a claim agrees with a clue or ME finding." },
+        "classification": {
+          "type": "string",
+          "description": "Hidden tag derived from authored veracity. genuine = ordinary agreement, mistakenConsensus = two or more agreeing claims all tagged mistaken, collusive = two or more agreeing claims that are part of a collusion. Never inferred from magnitude.",
+          "enum": ["genuine", "mistakenConsensus", "collusive"]
+        }
+      }
+    },
 
     "id": {
       "type": "string",

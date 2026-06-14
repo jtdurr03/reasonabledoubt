@@ -78,7 +78,7 @@
         "suggestibility": 20,
         "memoryReliability": 70
       },
-      "knowledgeSlice": ["CL_webb_alibi", "CL_webb_debt_denial"],
+      "knowledgeSlice": ["CL_webb_alibi", "CL_webb_alibi_time", "CL_webb_debt_denial", "CL_webb_calltime"],
       "placement": { "homeLocationId": "LOC_station", "canMove": false }
     },
     {
@@ -222,6 +222,12 @@
       "type": "event",
       "value": { "eventType": "toxicology", "description": "moderate blood alcohol, no toxins detected" },
       "summary": "Toxicology: moderate alcohol, no poisons (rules out a natural or toxic death)."
+    },
+    {
+      "factId": "F_webb_call_time",
+      "type": "time",
+      "value": { "kind": "point", "at": "21:00" },
+      "summary": "Webb telephoned Leo at 21:00 to arrange the late meeting (recorded on a message slip)."
     }
   ],
 
@@ -278,6 +284,22 @@
       "statedValue": { "district": "Westlake", "building": "Tiki Room", "room": "bar" },
       "veracity": "lie",
       "refutedBy": ["C_bottle_prints", "F_tod"]
+    },
+    {
+      "claimId": "CL_webb_alibi_time",
+      "characterId": "CH_webb",
+      "factId": "F_tod",
+      "statedValue": { "kind": "point", "at": "19:15" },
+      "veracity": "lie",
+      "refutedBy": ["C_bottle_prints", "F_webb_presence"]
+    },
+    {
+      "claimId": "CL_webb_calltime",
+      "characterId": "CH_webb",
+      "factId": "F_webb_call_time",
+      "statedValue": { "kind": "point", "at": "21:08" },
+      "veracity": "lie",
+      "refutedBy": ["C_phone_slip"]
     },
     {
       "claimId": "CL_webb_debt_denial",
@@ -358,6 +380,16 @@
       "locationId": "LOC_shop",
       "discoveryMethod": "read the loan ledger in the open safe",
       "supportsFactIds": ["F_webb_debt"],
+      "isSplitEvidence": false,
+      "mandatoryPass": true
+    },
+    {
+      "clueId": "C_phone_slip",
+      "type": "time",
+      "value": { "kind": "point", "at": "21:00" },
+      "locationId": "LOC_shop",
+      "discoveryMethod": "read the message slip by the shop telephone",
+      "supportsFactIds": ["F_webb_call_time"],
       "isSplitEvidence": false,
       "mandatoryPass": true
     }
@@ -454,7 +486,7 @@
       "target": { "characterId": "CH_webb" },
       "tier": 1,
       "preconditions": {},
-      "effects": { "revealsClaimIds": ["CL_webb_alibi", "CL_webb_debt_denial"] },
+      "effects": { "revealsClaimIds": ["CL_webb_alibi", "CL_webb_alibi_time", "CL_webb_debt_denial", "CL_webb_calltime"] },
       "costsBudget": true
     },
     {
