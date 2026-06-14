@@ -1,0 +1,813 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reasonabledoubt.game/schema/case-bible.schema.json",
+  "title": "CaseBible",
+  "description": "Canonical contract for a single procedurally generated detective case. The bible is the source of truth: no runtime component (dialogue model, scorer, UI) may ever invent or contradict a fact stored here. Every array element is addressed by a stable id string so other objects can reference it. This schema is the single source of truth for the data contract; the TypeScript types are kept in sync from it and the schema wins any disagreement.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "caseId",
+    "title",
+    "era",
+    "crimeTemplateId",
+    "resolution",
+    "locations",
+    "characters",
+    "facts",
+    "claims",
+    "clues",
+    "questions",
+    "corroborationMap",
+    "scoringSpec"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "description": "Semantic version of this schema contract that the case was authored against. Lets later steps detect bibles written for an older or newer contract.",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "caseId": {
+      "type": "string",
+      "description": "Stable unique identifier for this case (for example reference-homicide-001). Used as a filename-safe key and in telemetry.",
+      "minLength": 1
+    },
+    "title": {
+      "type": "string",
+      "description": "Human-readable case title shown to the player.",
+      "minLength": 1
+    },
+    "era": {
+      "type": "string",
+      "description": "In-fiction setting label. Fixed string for now; reserved for future expansion to other eras.",
+      "const": "1960s Los Angeles"
+    },
+    "crimeTemplateId": {
+      "type": "string",
+      "description": "Identifier of the crime template that shaped this case (for example homicide-single-perp). The template decides witness movement and witness-area usage. Stored for traceability; this step does not execute templates.",
+      "minLength": 1
+    },
+    "resolution": {
+      "$ref": "#/$defs/resolution"
+    },
+    "locations": {
+      "type": "array",
+      "description": "The five locations of the case: two reused (Medical Examiner office, Police Station) and three procedural (one crime scene, two optional witness areas). Author at least the locations referenced by the case.",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/location" }
+    },
+    "characters": {
+      "type": "array",
+      "description": "All people in the case: a victim, roughly 3 to 4 witnesses or suspects, and the fixed support characters (Medical Examiner, District Attorney).",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/character" }
+    },
+    "facts": {
+      "type": "array",
+      "description": "Objective truths in the case world. The truth layer. Claims and clues reference facts; corroboration and contradiction are computed against facts in later steps.",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/fact" }
+    },
+    "claims": {
+      "type": "array",
+      "description": "Character assertions about facts. A claim may match its fact (truthful), diverge by honest mistake (mistaken), or lie. Magnitude of divergence does NOT determine veracity; the veracity tag is authoritative.",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/claim" }
+    },
+    "clues": {
+      "type": "array",
+      "description": "Physical evidence the player can discover during scene exploration. Clue existence is decided by the truth layer, never by scene geometry.",
+      "items": { "$ref": "#/$defs/clue" }
+    },
+    "questions": {
+      "type": "array",
+      "description": "The gated interview menu. Tiered questions with preconditions and effects. The schema stores the flags and gates; it does not enforce runtime question budget.",
+      "items": { "$ref": "#/$defs/question" }
+    },
+    "corroborationMap": {
+      "type": "array",
+      "description": "For each fact, which claims and clues bear on it, each with a hidden tag (genuine, mistakenConsensus, collusive). Corroboration means agreement, not truth. A physical or ME fact outranks corroborated testimony, which outranks a single statement. The hidden tag is visible to the scorer only, never to the runtime or player.",
+      "items": { "$ref": "#/$defs/corroborationEntry" }
+    },
+    "meReport": {
+      "$ref": "#/$defs/meReport"
+    },
+    "scoringSpec": {
+      "$ref": "#/$defs/scoringSpec"
+    }
+  },
+
+  "$defs": {
+
+    "id": {
+      "type": "string",
+      "description": "A stable, non-empty reference id.",
+      "minLength": 1
+    },
+
+    "narrativeRole": {
+      "type": "string",
+      "description": "For collusion cases only: which narrative this element serves. 'surface' is the clean fabricated story pointing at the framed agent; 'deep' is the truth. Omit for non-collusion cases.",
+      "enum": ["surface", "deep"]
+    },
+
+    "factType": {
+      "type": "string",
+      "description": "The kind of thing a fact, claim, or clue is about. Drives later comparison logic. Each type implies a value shape.",
+      "enum": ["time", "location", "count", "identity", "object", "event", "relationship"]
+    },
+
+    "timeValue": {
+      "type": "object",
+      "description": "A time-typed value on an in-fiction 24-hour clock. Either a single point or a window with start and end.",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "description": "'point' for a single instant, 'window' for a span.",
+          "enum": ["point", "window"]
+        },
+        "at": {
+          "type": "string",
+          "description": "Point time in 24-hour HH:MM (required when kind is 'point').",
+          "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+        },
+        "start": {
+          "type": "string",
+          "description": "Window start in 24-hour HH:MM (required when kind is 'window').",
+          "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+        },
+        "end": {
+          "type": "string",
+          "description": "Window end in 24-hour HH:MM (required when kind is 'window').",
+          "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "point" } } },
+          "then": { "required": ["at"] }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "window" } } },
+          "then": { "required": ["start", "end"] }
+        }
+      ]
+    },
+
+    "locationValue": {
+      "type": "object",
+      "description": "A node in the place hierarchy (room within building within district), so distance can later be computed by hierarchy depth. May reference a known locationId.",
+      "additionalProperties": false,
+      "required": ["district"],
+      "properties": {
+        "locationId": {
+          "$ref": "#/$defs/id",
+          "description": "Optional reference to a locations[] entry this place corresponds to."
+        },
+        "district": {
+          "type": "string",
+          "description": "Top of the place hierarchy.",
+          "minLength": 1
+        },
+        "building": {
+          "type": "string",
+          "description": "Middle of the place hierarchy."
+        },
+        "room": {
+          "type": "string",
+          "description": "Bottom of the place hierarchy."
+        }
+      }
+    },
+
+    "countValue": {
+      "type": "object",
+      "description": "An integer count of some named thing.",
+      "additionalProperties": false,
+      "required": ["count", "of"],
+      "properties": {
+        "count": {
+          "type": "integer",
+          "description": "The integer quantity.",
+          "minimum": 0
+        },
+        "of": {
+          "type": "string",
+          "description": "What is being counted (for example 'gunshots', 'people present').",
+          "minLength": 1
+        }
+      }
+    },
+
+    "identityValue": {
+      "type": "object",
+      "description": "Identity either by direct character reference or by a fuzzy descriptor (for fuzzy matching later). Exactly one form must be used.",
+      "additionalProperties": false,
+      "properties": {
+        "characterId": {
+          "$ref": "#/$defs/id",
+          "description": "Direct reference to a characters[] entry."
+        },
+        "descriptor": {
+          "type": "object",
+          "description": "A fuzzy physical descriptor when the exact identity is not pinned.",
+          "additionalProperties": false,
+          "properties": {
+            "heightBand": {
+              "type": "string",
+              "description": "Coarse height band for fuzzy matching.",
+              "enum": ["short", "average", "tall"]
+            },
+            "build": {
+              "type": "string",
+              "description": "Coarse build descriptor.",
+              "enum": ["slight", "average", "heavy"]
+            },
+            "sex": {
+              "type": "string",
+              "description": "Apparent sex as described.",
+              "enum": ["male", "female", "unknown"]
+            },
+            "distinguishingMarks": {
+              "type": "array",
+              "description": "Notable marks (scar, limp, accent, etc.).",
+              "items": { "type": "string" }
+            }
+          }
+        }
+      },
+      "oneOf": [
+        { "required": ["characterId"], "not": { "required": ["descriptor"] } },
+        { "required": ["descriptor"], "not": { "required": ["characterId"] } }
+      ]
+    },
+
+    "objectValue": {
+      "type": "object",
+      "description": "A typed physical object with a category and optional subtype and attributes (for example weapon category 'blade' subtype 'kitchen knife').",
+      "additionalProperties": false,
+      "required": ["category"],
+      "properties": {
+        "category": {
+          "type": "string",
+          "description": "Broad object category (for example 'weapon', 'document', 'apparel').",
+          "minLength": 1
+        },
+        "subtype": {
+          "type": "string",
+          "description": "Finer classification (for example 'kitchen knife')."
+        },
+        "attributes": {
+          "type": "object",
+          "description": "Free-form typed attributes for later comparison (for example bloodied: true).",
+          "additionalProperties": true
+        }
+      }
+    },
+
+    "eventValue": {
+      "type": "object",
+      "description": "A structured event reference. Kept simple for now; richer modeling is deferred to later steps.",
+      "additionalProperties": false,
+      "required": ["eventType"],
+      "properties": {
+        "eventType": {
+          "type": "string",
+          "description": "Short label for the event (for example 'argument', 'departure').",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string",
+          "description": "Plain description of the event."
+        }
+      }
+    },
+
+    "relationshipValue": {
+      "type": "object",
+      "description": "A structured relationship between two characters. Kept simple for now.",
+      "additionalProperties": false,
+      "required": ["relationType", "fromCharacterId", "toCharacterId"],
+      "properties": {
+        "relationType": {
+          "type": "string",
+          "description": "Nature of the relationship (for example 'employer', 'lover', 'creditor').",
+          "minLength": 1
+        },
+        "fromCharacterId": {
+          "$ref": "#/$defs/id",
+          "description": "Subject character id."
+        },
+        "toCharacterId": {
+          "$ref": "#/$defs/id",
+          "description": "Object character id."
+        }
+      }
+    },
+
+    "typedValue": {
+      "description": "The generic value envelope shared by Fact.value, Claim.statedValue, and Clue.value. The applicable shape is selected by the parent's `type` field via an if/then constraint on the parent. This $def is the union of all shapes; parents narrow it.",
+      "oneOf": [
+        { "$ref": "#/$defs/timeValue" },
+        { "$ref": "#/$defs/locationValue" },
+        { "$ref": "#/$defs/countValue" },
+        { "$ref": "#/$defs/identityValue" },
+        { "$ref": "#/$defs/objectValue" },
+        { "$ref": "#/$defs/eventValue" },
+        { "$ref": "#/$defs/relationshipValue" }
+      ]
+    },
+
+    "valueByType": {
+      "description": "Reusable constraint set: given a sibling `type` field, require `value` to match the corresponding typed shape. Applied via allOf on Fact, Clue, and (against the claim's own stated type) by the validator for Claim.",
+      "allOf": [
+        { "if": { "properties": { "type": { "const": "time" } } }, "then": { "properties": { "value": { "$ref": "#/$defs/timeValue" } } } },
+        { "if": { "properties": { "type": { "const": "location" } } }, "then": { "properties": { "value": { "$ref": "#/$defs/locationValue" } } } },
+        { "if": { "properties": { "type": { "const": "count" } } }, "then": { "properties": { "value": { "$ref": "#/$defs/countValue" } } } },
+        { "if": { "properties": { "type": { "const": "identity" } } }, "then": { "properties": { "value": { "$ref": "#/$defs/identityValue" } } } },
+        { "if": { "properties": { "type": { "const": "object" } } }, "then": { "properties": { "value": { "$ref": "#/$defs/objectValue" } } } },
+        { "if": { "properties": { "type": { "const": "event" } } }, "then": { "properties": { "value": { "$ref": "#/$defs/eventValue" } } } },
+        { "if": { "properties": { "type": { "const": "relationship" } } }, "then": { "properties": { "value": { "$ref": "#/$defs/relationshipValue" } } } }
+      ]
+    },
+
+    "fact": {
+      "type": "object",
+      "description": "An objective truth in the case world.",
+      "additionalProperties": false,
+      "required": ["factId", "type", "value"],
+      "properties": {
+        "factId": { "$ref": "#/$defs/id", "description": "Stable id of this fact." },
+        "type": { "$ref": "#/$defs/factType", "description": "Drives the shape of value and later comparison logic." },
+        "value": { "$ref": "#/$defs/typedValue", "description": "The truth, shaped according to type." },
+        "narrativeRole": { "$ref": "#/$defs/narrativeRole", "description": "Collusion only: surface or deep narrative this fact serves." },
+        "summary": { "type": "string", "description": "Optional human-readable gloss for authors and docs. Not consumed by runtime logic." }
+      },
+      "allOf": [ { "$ref": "#/$defs/valueByType" } ]
+    },
+
+    "claim": {
+      "type": "object",
+      "description": "A character's assertion about a fact. statedValue uses the same typed shape as the fact's value but may diverge from it. The hidden veracity tag is authoritative.",
+      "additionalProperties": false,
+      "required": ["claimId", "characterId", "factId", "statedValue", "veracity"],
+      "properties": {
+        "claimId": { "$ref": "#/$defs/id", "description": "Stable id of this claim." },
+        "characterId": { "$ref": "#/$defs/id", "description": "The character who makes this claim." },
+        "factId": { "$ref": "#/$defs/id", "description": "The fact this claim speaks to." },
+        "statedValue": { "$ref": "#/$defs/typedValue", "description": "What the character asserts. Same typed shape as the referenced fact's value. Its type must match the referenced fact's type; this cross-object check is enforced by the validator, not the schema." },
+        "veracity": {
+          "type": "string",
+          "description": "Hidden authoritative tag. 'truthful' matches the fact, 'mistaken' is an honest error, 'lie' is deliberate. Magnitude of divergence does not determine this; small lies and large mistakes are both legal.",
+          "enum": ["truthful", "mistaken", "lie"]
+        },
+        "refutedBy": {
+          "type": "array",
+          "description": "Required when veracity is 'lie'. The clue or fact id(s) that break the lie. A lie with no refutedBy is invalid.",
+          "items": { "$ref": "#/$defs/id" },
+          "minItems": 1
+        },
+        "correctedBy": {
+          "type": "array",
+          "description": "Required when veracity is 'mistaken'. The physical clue or ME finding id(s) that override the mistake. A mistake with no correctedBy is invalid.",
+          "items": { "$ref": "#/$defs/id" },
+          "minItems": 1
+        },
+        "narrativeRole": { "$ref": "#/$defs/narrativeRole", "description": "Collusion only: surface or deep narrative this claim serves." }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "veracity": { "const": "lie" } } },
+          "then": { "required": ["refutedBy"] }
+        },
+        {
+          "if": { "properties": { "veracity": { "const": "mistaken" } } },
+          "then": { "required": ["correctedBy"] }
+        }
+      ]
+    },
+
+    "traits": {
+      "type": "object",
+      "description": "Hidden integer trait vector, each 0 to 100, sampled normal around 50 with a small standard deviation so most characters are typical and the tails produce outliers. Traits are hidden from the player and modulate willingness and delivery only, NEVER knowledge. The Medical Examiner and District Attorney are exempt (see character.traitExempt).",
+      "additionalProperties": false,
+      "required": [
+        "authorityDeference",
+        "composure",
+        "honesty",
+        "selfInterest",
+        "talkativeness",
+        "suggestibility",
+        "memoryReliability"
+      ],
+      "properties": {
+        "authorityDeference": { "type": "integer", "minimum": 0, "maximum": 100, "description": "0 = openly defiant or hostile to police authority, 50 = normal cooperation, 100 = anxiously eager to please authority." },
+        "composure": { "type": "integer", "minimum": 0, "maximum": 100, "description": "0 = cracks under pressure, rambles, contradicts self, 50 = typical nerves, 100 = unflappable." },
+        "honesty": { "type": "integer", "minimum": 0, "maximum": 100, "description": "0 = lies readily when it suits them, 50 = ordinarily honest, 100 = compulsively truthful. Modulates delivery only; the authoritative truth of any claim is its veracity tag, not this trait." },
+        "selfInterest": { "type": "integer", "minimum": 0, "maximum": 100, "description": "0 = selfless, volunteers damaging info, 50 = normal, 100 = will shade or omit to protect their own stake." },
+        "talkativeness": { "type": "integer", "minimum": 0, "maximum": 100, "description": "0 = terse, monosyllabic, 50 = normal, 100 = volunteers tangents and extra detail." },
+        "suggestibility": { "type": "integer", "minimum": 0, "maximum": 100, "description": "0 = resists leading questions, 50 = normal, 100 = easily led into agreeing with a framing." },
+        "memoryReliability": { "type": "integer", "minimum": 0, "maximum": 100, "description": "0 = badly muddled recall (source of honest mistakes), 50 = ordinary memory, 100 = near-perfect recall. Affects only how a character reports knowledge, never what is true." }
+      }
+    },
+
+    "placement": {
+      "type": "object",
+      "description": "Where a character is found and whether they move. The crime template decides movement and witness-area usage.",
+      "additionalProperties": false,
+      "required": ["homeLocationId", "canMove"],
+      "properties": {
+        "homeLocationId": { "$ref": "#/$defs/id", "description": "The location where the character is first encountered." },
+        "canMove": { "type": "boolean", "description": "Whether the character can relocate during the case." },
+        "altLocationId": { "$ref": "#/$defs/id", "description": "Alternate location the character may move to. Required when canMove is true." }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "canMove": { "const": true } } },
+          "then": { "required": ["altLocationId"] }
+        }
+      ]
+    },
+
+    "character": {
+      "type": "object",
+      "description": "A person in the case. The ME and DA are exempt from trait-driven behavior (traitExempt true); for them traits may be omitted and the ME is a reliable, authority-neutral narrator who never lies.",
+      "additionalProperties": false,
+      "required": ["characterId", "name", "role", "knowledgeSlice", "placement", "traitExempt"],
+      "properties": {
+        "characterId": { "$ref": "#/$defs/id", "description": "Stable id of this character." },
+        "name": { "type": "string", "description": "Display name.", "minLength": 1 },
+        "role": {
+          "type": "string",
+          "description": "Functional role in the case.",
+          "enum": ["victim", "witness", "suspect", "perp", "framedAgent", "colluder", "medicalExaminer", "districtAttorney"]
+        },
+        "traitExempt": {
+          "type": "boolean",
+          "description": "True when the character is exempt from trait-driven behavior (Medical Examiner and District Attorney). Explicitly encoded rather than inferred from role by convention. When true, traits may be omitted; when false, traits are required."
+        },
+        "traits": { "$ref": "#/$defs/traits", "description": "Hidden behavior vector. Required for non-exempt characters; optional for exempt ones." },
+        "knowledgeSlice": {
+          "type": "array",
+          "description": "The set of claimIds this character can produce. Traits never widen or narrow this set; knowledge is fixed by the truth layer.",
+          "items": { "$ref": "#/$defs/id" }
+        },
+        "placement": { "$ref": "#/$defs/placement", "description": "Home location and movement." }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "role": { "enum": ["medicalExaminer", "districtAttorney"] } } },
+          "then": { "properties": { "traitExempt": { "const": true } } },
+          "else": { "required": ["traits"], "properties": { "traitExempt": { "const": false } } }
+        }
+      ]
+    },
+
+    "location": {
+      "type": "object",
+      "description": "One of the case's locations. Carries the place hierarchy for distance computation and the mandatoryPass flag that the split-evidence constraint depends on.",
+      "additionalProperties": false,
+      "required": ["locationId", "name", "kind", "place", "mandatoryPass", "reused"],
+      "properties": {
+        "locationId": { "$ref": "#/$defs/id", "description": "Stable id of this location." },
+        "name": { "type": "string", "description": "Display name.", "minLength": 1 },
+        "kind": {
+          "type": "string",
+          "description": "Location category. crimeScene and witnessArea are procedural; medicalExaminer and policeStation are authored once and reused.",
+          "enum": ["crimeScene", "medicalExaminer", "policeStation", "witnessArea"]
+        },
+        "place": {
+          "type": "object",
+          "description": "The place hierarchy node for this location (room within building within district).",
+          "additionalProperties": false,
+          "required": ["district"],
+          "properties": {
+            "district": { "type": "string", "description": "Top of the hierarchy.", "minLength": 1 },
+            "building": { "type": "string", "description": "Middle of the hierarchy." },
+            "room": { "type": "string", "description": "Bottom of the hierarchy." }
+          }
+        },
+        "mandatoryPass": {
+          "type": "boolean",
+          "description": "True when the player is guaranteed to pass through this location (cannot skip it). Any split-evidence clue must sit at a mandatoryPass location so a hard case can never become unwinnable by skipping an optional room. This cross-object invariant is enforced by the validator."
+        },
+        "reused": {
+          "type": "boolean",
+          "description": "True for the two authored-once-and-reused locations (Medical Examiner office, Police Station)."
+        }
+      }
+    },
+
+    "clue": {
+      "type": "object",
+      "description": "A physical evidence item discoverable during scene exploration. Existence is decided by the truth layer, never by scene geometry. mandatoryPass is inherited from the clue's location and the validator checks consistency.",
+      "additionalProperties": false,
+      "required": ["clueId", "type", "value", "locationId", "discoveryMethod", "supportsFactIds", "isSplitEvidence", "mandatoryPass"],
+      "properties": {
+        "clueId": { "$ref": "#/$defs/id", "description": "Stable id of this clue." },
+        "type": { "$ref": "#/$defs/factType", "description": "Same enum as Fact.type; selects the value shape." },
+        "value": { "$ref": "#/$defs/typedValue", "description": "The clue's content, shaped by type." },
+        "locationId": { "$ref": "#/$defs/id", "description": "The location where the clue is found." },
+        "discoveryMethod": { "type": "string", "description": "How the player finds it during scene exploration (for example 'search the desk drawer').", "minLength": 1 },
+        "supportsFactIds": {
+          "type": "array",
+          "description": "The fact id(s) this clue bears on (corroborates, refutes, or corrects). Used by later comparison logic.",
+          "items": { "$ref": "#/$defs/id" }
+        },
+        "narrativeRole": { "$ref": "#/$defs/narrativeRole", "description": "Collusion only: surface or deep narrative this clue serves." },
+        "isSplitEvidence": {
+          "type": "boolean",
+          "description": "True for clues the colluders could neither fabricate nor remove and that the surface narrative cannot explain. Must be false outside collusion cases. When true, the clue's location must be mandatoryPass (validator-enforced)."
+        },
+        "mandatoryPass": {
+          "type": "boolean",
+          "description": "Inherited copy of the location's mandatoryPass flag, denormalized here for convenience. The validator verifies it matches the referenced location."
+        }
+      },
+      "allOf": [ { "$ref": "#/$defs/valueByType" } ]
+    },
+
+    "questionTarget": {
+      "type": "object",
+      "description": "Who a question is aimed at: either a role (any character of that role) or a specific characterId. Exactly one form.",
+      "additionalProperties": false,
+      "properties": {
+        "role": {
+          "type": "string",
+          "description": "Target any character of this role.",
+          "enum": ["victim", "witness", "suspect", "perp", "framedAgent", "colluder", "medicalExaminer", "districtAttorney"]
+        },
+        "characterId": { "$ref": "#/$defs/id", "description": "Target a specific character." }
+      },
+      "oneOf": [
+        { "required": ["role"], "not": { "required": ["characterId"] } },
+        { "required": ["characterId"], "not": { "required": ["role"] } }
+      ]
+    },
+
+    "contradictionRef": {
+      "type": "object",
+      "description": "A contradiction a confront question deploys: a claim set against the evidence that breaks it.",
+      "additionalProperties": false,
+      "required": ["claimId", "evidenceIds"],
+      "properties": {
+        "claimId": { "$ref": "#/$defs/id", "description": "The claim being confronted." },
+        "evidenceIds": {
+          "type": "array",
+          "description": "The clue or fact id(s) that contradict the claim (typically the claim's own refutedBy or correctedBy).",
+          "items": { "$ref": "#/$defs/id" },
+          "minItems": 1
+        }
+      }
+    },
+
+    "question": {
+      "type": "object",
+      "description": "One entry in the gated interview menu. Tier 1 is baseline, tier 2 is clue-gated, tier 3 is confront. The schema stores gates and flags; the runtime (a later step) enforces the question budget: 10 questions per witness, plus 3 more only when newly found evidence is relevant to that specific witness and unlocks a new question for them; deploying an already-found contradiction is cheap or free while probing questions cost full budget. The question tree must be able to express a path toward 'no perp' or toward exposing colluders, and must not assume a guilty individual exists.",
+      "additionalProperties": false,
+      "required": ["questionId", "text", "target", "tier", "costsBudget"],
+      "properties": {
+        "questionId": { "$ref": "#/$defs/id", "description": "Stable id of this question." },
+        "text": { "type": "string", "description": "The question as shown to the player.", "minLength": 1 },
+        "target": { "$ref": "#/$defs/questionTarget", "description": "Role or specific character this question addresses." },
+        "tier": {
+          "type": "integer",
+          "description": "1 baseline, 2 clue-gated, 3 confront.",
+          "enum": [1, 2, 3]
+        },
+        "preconditions": {
+          "type": "object",
+          "description": "What must be satisfied for the question to appear. Empty arrays mean no precondition of that kind.",
+          "additionalProperties": false,
+          "properties": {
+            "cluesHeld": { "type": "array", "description": "clueIds the player must hold.", "items": { "$ref": "#/$defs/id" } },
+            "claimsCorroborated": { "type": "array", "description": "factIds (or claimIds) that must be corroborated.", "items": { "$ref": "#/$defs/id" } },
+            "contradictionsFound": { "type": "array", "description": "contradiction/claim ids the player must have already surfaced.", "items": { "$ref": "#/$defs/id" } }
+          }
+        },
+        "effects": {
+          "type": "object",
+          "description": "What asking the question does.",
+          "additionalProperties": false,
+          "properties": {
+            "revealsClaimIds": { "type": "array", "description": "claimIds revealed by asking.", "items": { "$ref": "#/$defs/id" } },
+            "unlocksQuestionIds": { "type": "array", "description": "questionIds this unlocks.", "items": { "$ref": "#/$defs/id" } }
+          }
+        },
+        "costsBudget": {
+          "type": "boolean",
+          "description": "Whether asking spends from the per-witness question budget. Probing questions cost full budget; deploying an already-found contradiction is cheap or free (costsBudget false). The runtime enforces the actual budget arithmetic."
+        },
+        "contradictionRef": { "$ref": "#/$defs/contradictionRef", "description": "Required for tier 3 confront questions: the contradiction deployed." }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "tier": { "const": 3 } } },
+          "then": { "required": ["contradictionRef"] }
+        }
+      ]
+    },
+
+    "corroborationEntry": {
+      "type": "object",
+      "description": "Per-fact record of every claim and clue that bears on it, each with a hidden tag. Corroboration means agreement, not truth.",
+      "additionalProperties": false,
+      "required": ["factId", "bearing"],
+      "properties": {
+        "factId": { "$ref": "#/$defs/id", "description": "The fact these sources bear on." },
+        "bearing": {
+          "type": "array",
+          "description": "Each claim or clue that addresses the fact, with its hidden corroboration tag (visible to the scorer only).",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["sourceType", "sourceId", "tag"],
+            "properties": {
+              "sourceType": { "type": "string", "description": "Whether the source is a claim or a clue.", "enum": ["claim", "clue"] },
+              "sourceId": { "$ref": "#/$defs/id", "description": "The claimId or clueId." },
+              "tag": {
+                "type": "string",
+                "description": "Hidden tag. 'genuine' = independent agreement that reflects truth, 'mistakenConsensus' = sources agree but are wrong, 'collusive' = agreement manufactured by colluders.",
+                "enum": ["genuine", "mistakenConsensus", "collusive"]
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "meReport": {
+      "type": "object",
+      "description": "Deterministic autopsy, present only for cases with a body. All entries are references to time/object/event facts. This is the override that can break a false consensus and the backbone of distinguishing homicide from accident, suicide, and natural causes.",
+      "additionalProperties": false,
+      "required": ["causeOfDeathFactId", "timeOfDeathFactId", "weaponClassFactId"],
+      "properties": {
+        "causeOfDeathFactId": { "$ref": "#/$defs/id", "description": "Reference to the fact stating cause of death." },
+        "timeOfDeathFactId": { "$ref": "#/$defs/id", "description": "Reference to the time-type fact giving the time-of-death window." },
+        "weaponClassFactId": { "$ref": "#/$defs/id", "description": "Reference to the fact stating the weapon class." },
+        "defensiveWoundsFactId": { "$ref": "#/$defs/id", "description": "Optional reference to a fact recording defensive wounds." },
+        "toxicologyFactId": { "$ref": "#/$defs/id", "description": "Optional reference to a fact recording toxicology findings." }
+      }
+    },
+
+    "evidenceRef": {
+      "type": "object",
+      "description": "A reference to a single piece of evidence in the scoring chain: either a fact or a clue.",
+      "additionalProperties": false,
+      "required": ["kind", "id"],
+      "properties": {
+        "kind": { "type": "string", "description": "Whether the cited evidence is a fact or a clue.", "enum": ["fact", "clue"] },
+        "id": { "$ref": "#/$defs/id", "description": "The factId or clueId." }
+      }
+    },
+
+    "scoringSpec": {
+      "type": "object",
+      "description": "How the District Attorney endgame is judged deterministically. The DA dialogue (a later step) only dramatizes this computed result; it does not decide it. The schema stores the spec; it does not run the scorer.",
+      "additionalProperties": false,
+      "required": ["requiredEvidenceChain", "sufficientChainRule", "unexplainedContradictionRule", "strengthHierarchy"],
+      "properties": {
+        "requiredEvidenceChain": {
+          "type": "array",
+          "description": "The facts and clues a correct accusation must cite. Order is the intended logical chain.",
+          "items": { "$ref": "#/$defs/evidenceRef" },
+          "minItems": 1
+        },
+        "sufficientChainRule": {
+          "type": "string",
+          "description": "Plain-language rule for what counts as a sufficient chain (which links are mandatory, what may be substituted). Authoritative spec for the later scorer.",
+          "minLength": 1
+        },
+        "unexplainedContradictionRule": {
+          "type": "string",
+          "description": "Plain-language rule for how unexplained contradictions count against an accusation.",
+          "minLength": 1
+        },
+        "strengthHierarchy": {
+          "type": "array",
+          "description": "Ordered strength hierarchy, strongest first (physical or ME fact > corroborated testimony > single statement).",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1
+        },
+        "collusionRequirements": {
+          "type": "object",
+          "description": "Extra, higher bar required only for collusion cases. Omit for other resolution classes.",
+          "additionalProperties": false,
+          "required": ["mustUnnameFramedAgent", "mustCiteSplitEvidence", "higherBar"],
+          "properties": {
+            "mustUnnameFramedAgent": { "type": "boolean", "description": "A correct accusation must clear the framed agent." },
+            "mustCiteSplitEvidence": { "type": "boolean", "description": "A correct accusation must cite the split evidence." },
+            "higherBar": { "type": "boolean", "description": "Whether the overall pass threshold is raised for this case." }
+          }
+        }
+      }
+    },
+
+    "narrativeStructure": {
+      "type": "object",
+      "description": "A named narrative used by collusion resolutions: a labeled story with a description.",
+      "additionalProperties": false,
+      "required": ["name", "description"],
+      "properties": {
+        "name": { "type": "string", "description": "Short label for the narrative.", "minLength": 1 },
+        "description": { "type": "string", "description": "Plain account of the story this narrative tells.", "minLength": 1 }
+      }
+    },
+
+    "resolution": {
+      "type": "object",
+      "description": "The real outcome of the case. A discriminated union on `class`. The reference fixture uses class 'perp'; full structural room is reserved for collusion even though no fixture exercises it yet.",
+      "required": ["class", "summary"],
+      "properties": {
+        "class": {
+          "type": "string",
+          "description": "Resolution discriminator.",
+          "enum": ["perp", "accident", "suicide", "natural", "framing", "collusion"]
+        },
+        "summary": { "type": "string", "description": "Plain-language statement of the real outcome.", "minLength": 1 }
+      },
+      "oneOf": [
+        {
+          "title": "perp",
+          "description": "A single guilty character.",
+          "additionalProperties": false,
+          "required": ["class", "summary", "perpCharacterId"],
+          "properties": {
+            "class": { "const": "perp" },
+            "summary": { "type": "string", "minLength": 1 },
+            "perpCharacterId": { "$ref": "#/$defs/id", "description": "The single guilty character." }
+          }
+        },
+        {
+          "title": "accident",
+          "description": "A null case: death by accident, no perp.",
+          "additionalProperties": false,
+          "required": ["class", "summary"],
+          "properties": {
+            "class": { "const": "accident" },
+            "summary": { "type": "string", "minLength": 1 }
+          }
+        },
+        {
+          "title": "suicide",
+          "description": "A null case: suicide, no perp.",
+          "additionalProperties": false,
+          "required": ["class", "summary"],
+          "properties": {
+            "class": { "const": "suicide" },
+            "summary": { "type": "string", "minLength": 1 }
+          }
+        },
+        {
+          "title": "natural",
+          "description": "A null case: natural causes, no perp.",
+          "additionalProperties": false,
+          "required": ["class", "summary"],
+          "properties": {
+            "class": { "const": "natural" },
+            "summary": { "type": "string", "minLength": 1 }
+          }
+        },
+        {
+          "title": "framing",
+          "description": "An innocent agent is set up by one offender.",
+          "additionalProperties": false,
+          "required": ["class", "summary", "framedAgentId", "offenderId"],
+          "properties": {
+            "class": { "const": "framing" },
+            "summary": { "type": "string", "minLength": 1 },
+            "framedAgentId": { "$ref": "#/$defs/id", "description": "The innocent agent set up to take the blame." },
+            "offenderId": { "$ref": "#/$defs/id", "description": "The actual offender doing the framing." }
+          }
+        },
+        {
+          "title": "collusion",
+          "description": "Two or more characters share a fabricated story; the ostensible perp is a framed agent and the real crime is the collusion plus the underlying act. Carries two named narratives and the split evidence the colluders could not control.",
+          "additionalProperties": false,
+          "required": ["class", "summary", "colluderIds", "framedAgentId", "surfaceNarrative", "deepNarrative", "splitEvidence"],
+          "properties": {
+            "class": { "const": "collusion" },
+            "summary": { "type": "string", "minLength": 1 },
+            "colluderIds": {
+              "type": "array",
+              "description": "The two or more characters who share the fabricated story.",
+              "items": { "$ref": "#/$defs/id" },
+              "minItems": 2
+            },
+            "framedAgentId": { "$ref": "#/$defs/id", "description": "The innocent agent the surface narrative points at." },
+            "surfaceNarrative": { "$ref": "#/$defs/narrativeStructure", "description": "The clean, corroborated story the colluders built, pointing at the framed agent." },
+            "deepNarrative": { "$ref": "#/$defs/narrativeStructure", "description": "The truth." },
+            "splitEvidence": {
+              "type": "array",
+              "description": "Clue or physical-fact ids the colluders could not fabricate or remove and that the surface narrative cannot explain. Each split-evidence clue must sit at a mandatoryPass location (validator-enforced) so the hard case stays winnable.",
+              "items": { "$ref": "#/$defs/id" },
+              "minItems": 1
+            }
+          }
+        }
+      ]
+    }
+  }
+}

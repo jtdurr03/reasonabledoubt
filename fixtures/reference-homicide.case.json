@@ -1,0 +1,581 @@
+{
+  "schemaVersion": "1.0.0",
+  "caseId": "reference-homicide-001",
+  "title": "The Bunker Hill Bottle",
+  "era": "1960s Los Angeles",
+  "crimeTemplateId": "homicide-single-perp",
+
+  "resolution": {
+    "class": "perp",
+    "summary": "Pawnbroker Leo Hatcher was beaten to death in his back office by his partner Marcus Webb, who owed Leo a crushing gambling debt and struck him with a whiskey bottle during a late argument.",
+    "perpCharacterId": "CH_webb"
+  },
+
+  "locations": [
+    {
+      "locationId": "LOC_shop",
+      "name": "Hatcher's Loans",
+      "kind": "crimeScene",
+      "place": { "district": "Bunker Hill", "building": "Hatcher's Loans", "room": "back office" },
+      "mandatoryPass": true,
+      "reused": false
+    },
+    {
+      "locationId": "LOC_me",
+      "name": "County Medical Examiner",
+      "kind": "medicalExaminer",
+      "place": { "district": "Civic Center", "building": "County Medical Examiner", "room": "autopsy suite" },
+      "mandatoryPass": true,
+      "reused": true
+    },
+    {
+      "locationId": "LOC_station",
+      "name": "Central Division Station",
+      "kind": "policeStation",
+      "place": { "district": "Civic Center", "building": "Central Division Station", "room": "interview room" },
+      "mandatoryPass": true,
+      "reused": true
+    },
+    {
+      "locationId": "LOC_diner",
+      "name": "Angel's Flight Diner",
+      "kind": "witnessArea",
+      "place": { "district": "Bunker Hill", "building": "Angel's Flight Diner", "room": "counter" },
+      "mandatoryPass": false,
+      "reused": false
+    }
+  ],
+
+  "characters": [
+    {
+      "characterId": "CH_leo",
+      "name": "Leo Hatcher",
+      "role": "victim",
+      "traitExempt": false,
+      "traits": {
+        "authorityDeference": 50,
+        "composure": 50,
+        "honesty": 50,
+        "selfInterest": 50,
+        "talkativeness": 50,
+        "suggestibility": 50,
+        "memoryReliability": 50
+      },
+      "knowledgeSlice": [],
+      "placement": { "homeLocationId": "LOC_shop", "canMove": false }
+    },
+    {
+      "characterId": "CH_webb",
+      "name": "Marcus Webb",
+      "role": "perp",
+      "traitExempt": false,
+      "traits": {
+        "authorityDeference": 40,
+        "composure": 75,
+        "honesty": 30,
+        "selfInterest": 80,
+        "talkativeness": 45,
+        "suggestibility": 20,
+        "memoryReliability": 70
+      },
+      "knowledgeSlice": ["CL_webb_alibi", "CL_webb_debt_denial"],
+      "placement": { "homeLocationId": "LOC_station", "canMove": false }
+    },
+    {
+      "characterId": "CH_dolores",
+      "name": "Dolores Vane",
+      "role": "witness",
+      "traitExempt": false,
+      "traits": {
+        "authorityDeference": 88,
+        "composure": 60,
+        "honesty": 78,
+        "selfInterest": 35,
+        "talkativeness": 55,
+        "suggestibility": 62,
+        "memoryReliability": 80
+      },
+      "knowledgeSlice": ["CL_dolores_departtime", "CL_dolores_backdoor"],
+      "placement": { "homeLocationId": "LOC_shop", "canMove": true, "altLocationId": "LOC_station" }
+    },
+    {
+      "characterId": "CH_sid",
+      "name": "Sid Brunner",
+      "role": "witness",
+      "traitExempt": false,
+      "traits": {
+        "authorityDeference": 8,
+        "composure": 45,
+        "honesty": 22,
+        "selfInterest": 85,
+        "talkativeness": 30,
+        "suggestibility": 25,
+        "memoryReliability": 65
+      },
+      "knowledgeSlice": ["CL_sid_departtime", "CL_sid_sawcar"],
+      "placement": { "homeLocationId": "LOC_diner", "canMove": true, "altLocationId": "LOC_station" }
+    },
+    {
+      "characterId": "CH_etta",
+      "name": "Etta Maris",
+      "role": "witness",
+      "traitExempt": false,
+      "traits": {
+        "authorityDeference": 60,
+        "composure": 50,
+        "honesty": 80,
+        "selfInterest": 30,
+        "talkativeness": 70,
+        "suggestibility": 72,
+        "memoryReliability": 18
+      },
+      "knowledgeSlice": ["CL_etta_crashtime", "CL_etta_seedolores"],
+      "placement": { "homeLocationId": "LOC_diner", "canMove": false }
+    },
+    {
+      "characterId": "CH_me",
+      "name": "Dr. Howard Quayle",
+      "role": "medicalExaminer",
+      "traitExempt": true,
+      "knowledgeSlice": ["CL_me_tod", "CL_me_cause", "CL_me_defensive"],
+      "placement": { "homeLocationId": "LOC_me", "canMove": false }
+    },
+    {
+      "characterId": "CH_da",
+      "name": "Patricia Lund",
+      "role": "districtAttorney",
+      "traitExempt": true,
+      "knowledgeSlice": [],
+      "placement": { "homeLocationId": "LOC_station", "canMove": false }
+    }
+  ],
+
+  "facts": [
+    {
+      "factId": "F_dolores_departure",
+      "type": "time",
+      "value": { "kind": "point", "at": "21:15" },
+      "summary": "Dolores Vane locked the front door and left the shop at 21:15, leaving Leo alive."
+    },
+    {
+      "factId": "F_backdoor_state",
+      "type": "object",
+      "value": { "category": "door", "subtype": "back alley door", "attributes": { "state": "unlocked", "latch": "broken" } },
+      "summary": "The back alley door was unlocked with a forced latch: the killer's way in."
+    },
+    {
+      "factId": "F_sid_presence",
+      "type": "time",
+      "value": { "kind": "point", "at": "21:48" },
+      "summary": "Sid Brunner was still at the shop at 21:48, when he pawned a watch."
+    },
+    {
+      "factId": "F_webb_presence",
+      "type": "time",
+      "value": { "kind": "point", "at": "21:55" },
+      "summary": "Marcus Webb's car was at the shop at 21:55, seen by Sid Brunner."
+    },
+    {
+      "factId": "F_webb_location_tod",
+      "type": "location",
+      "value": { "locationId": "LOC_shop", "district": "Bunker Hill", "building": "Hatcher's Loans", "room": "back office" },
+      "summary": "During the time-of-death window Marcus Webb was at the shop, not at the Tiki Room as he claims."
+    },
+    {
+      "factId": "F_webb_debt",
+      "type": "relationship",
+      "value": { "relationType": "debtor", "fromCharacterId": "CH_webb", "toCharacterId": "CH_leo" },
+      "summary": "Marcus Webb owed Leo Hatcher a large gambling debt: the motive."
+    },
+    {
+      "factId": "F_crash_time",
+      "type": "time",
+      "value": { "kind": "point", "at": "22:00" },
+      "summary": "The fatal blow, heard as a crash from the alley, occurred about 22:00."
+    },
+    {
+      "factId": "F_tod",
+      "type": "time",
+      "value": { "kind": "window", "start": "21:45", "end": "22:30" },
+      "summary": "Medical Examiner time-of-death window: 21:45 to 22:30."
+    },
+    {
+      "factId": "F_cause",
+      "type": "event",
+      "value": { "eventType": "cause of death", "description": "blunt force trauma to the head" },
+      "summary": "Cause of death: blunt force trauma to the head."
+    },
+    {
+      "factId": "F_weapon",
+      "type": "object",
+      "value": { "category": "weapon", "subtype": "glass bottle", "attributes": { "class": "blunt instrument" } },
+      "summary": "Weapon class: a heavy glass whiskey bottle used as a blunt instrument."
+    },
+    {
+      "factId": "F_defensive",
+      "type": "count",
+      "value": { "count": 2, "of": "defensive bruises on the victim's forearms" },
+      "summary": "Two defensive bruises indicate a struggle, ruling out accident and suicide."
+    },
+    {
+      "factId": "F_tox",
+      "type": "event",
+      "value": { "eventType": "toxicology", "description": "moderate blood alcohol, no toxins detected" },
+      "summary": "Toxicology: moderate alcohol, no poisons (rules out a natural or toxic death)."
+    }
+  ],
+
+  "claims": [
+    {
+      "claimId": "CL_dolores_departtime",
+      "characterId": "CH_dolores",
+      "factId": "F_dolores_departure",
+      "statedValue": { "kind": "point", "at": "21:15" },
+      "veracity": "truthful"
+    },
+    {
+      "claimId": "CL_etta_seedolores",
+      "characterId": "CH_etta",
+      "factId": "F_dolores_departure",
+      "statedValue": { "kind": "point", "at": "21:15" },
+      "veracity": "truthful"
+    },
+    {
+      "claimId": "CL_dolores_backdoor",
+      "characterId": "CH_dolores",
+      "factId": "F_backdoor_state",
+      "statedValue": { "category": "door", "subtype": "back alley door", "attributes": { "state": "locked" } },
+      "veracity": "mistaken",
+      "correctedBy": ["C_backdoor_latch"]
+    },
+    {
+      "claimId": "CL_sid_departtime",
+      "characterId": "CH_sid",
+      "factId": "F_sid_presence",
+      "statedValue": { "kind": "point", "at": "21:00" },
+      "veracity": "lie",
+      "refutedBy": ["C_pawnticket"]
+    },
+    {
+      "claimId": "CL_sid_sawcar",
+      "characterId": "CH_sid",
+      "factId": "F_webb_presence",
+      "statedValue": { "kind": "point", "at": "21:55" },
+      "veracity": "truthful"
+    },
+    {
+      "claimId": "CL_etta_crashtime",
+      "characterId": "CH_etta",
+      "factId": "F_crash_time",
+      "statedValue": { "kind": "point", "at": "23:00" },
+      "veracity": "mistaken",
+      "correctedBy": ["F_tod", "C_stopped_watch"]
+    },
+    {
+      "claimId": "CL_webb_alibi",
+      "characterId": "CH_webb",
+      "factId": "F_webb_location_tod",
+      "statedValue": { "district": "Westlake", "building": "Tiki Room", "room": "bar" },
+      "veracity": "lie",
+      "refutedBy": ["C_bottle_prints", "F_tod"]
+    },
+    {
+      "claimId": "CL_webb_debt_denial",
+      "characterId": "CH_webb",
+      "factId": "F_webb_debt",
+      "statedValue": { "relationType": "no debt", "fromCharacterId": "CH_webb", "toCharacterId": "CH_leo" },
+      "veracity": "lie",
+      "refutedBy": ["C_ledger_debt"]
+    },
+    {
+      "claimId": "CL_me_tod",
+      "characterId": "CH_me",
+      "factId": "F_tod",
+      "statedValue": { "kind": "window", "start": "21:45", "end": "22:30" },
+      "veracity": "truthful"
+    },
+    {
+      "claimId": "CL_me_cause",
+      "characterId": "CH_me",
+      "factId": "F_cause",
+      "statedValue": { "eventType": "cause of death", "description": "blunt force trauma to the head" },
+      "veracity": "truthful"
+    },
+    {
+      "claimId": "CL_me_defensive",
+      "characterId": "CH_me",
+      "factId": "F_defensive",
+      "statedValue": { "count": 2, "of": "defensive bruises on the victim's forearms" },
+      "veracity": "truthful"
+    }
+  ],
+
+  "clues": [
+    {
+      "clueId": "C_pawnticket",
+      "type": "time",
+      "value": { "kind": "point", "at": "21:48" },
+      "locationId": "LOC_shop",
+      "discoveryMethod": "examine the pawn ledger entries on the front counter",
+      "supportsFactIds": ["F_sid_presence"],
+      "isSplitEvidence": false,
+      "mandatoryPass": true
+    },
+    {
+      "clueId": "C_backdoor_latch",
+      "type": "object",
+      "value": { "category": "door hardware", "subtype": "latch", "attributes": { "state": "forced from the alley side" } },
+      "locationId": "LOC_shop",
+      "discoveryMethod": "inspect the back alley door",
+      "supportsFactIds": ["F_backdoor_state"],
+      "isSplitEvidence": false,
+      "mandatoryPass": true
+    },
+    {
+      "clueId": "C_stopped_watch",
+      "type": "time",
+      "value": { "kind": "point", "at": "22:05" },
+      "locationId": "LOC_shop",
+      "discoveryMethod": "examine the victim's shattered wristwatch",
+      "supportsFactIds": ["F_crash_time", "F_tod"],
+      "isSplitEvidence": false,
+      "mandatoryPass": true
+    },
+    {
+      "clueId": "C_bottle_prints",
+      "type": "object",
+      "value": { "category": "weapon", "subtype": "glass bottle", "attributes": { "latentPrints": "matched to Marcus Webb" } },
+      "locationId": "LOC_shop",
+      "discoveryMethod": "dust the broken bottle beside the desk",
+      "supportsFactIds": ["F_weapon", "F_webb_location_tod"],
+      "isSplitEvidence": false,
+      "mandatoryPass": true
+    },
+    {
+      "clueId": "C_ledger_debt",
+      "type": "relationship",
+      "value": { "relationType": "debtor", "fromCharacterId": "CH_webb", "toCharacterId": "CH_leo" },
+      "locationId": "LOC_shop",
+      "discoveryMethod": "read the loan ledger in the open safe",
+      "supportsFactIds": ["F_webb_debt"],
+      "isSplitEvidence": false,
+      "mandatoryPass": true
+    }
+  ],
+
+  "questions": [
+    {
+      "questionId": "Q_dol_1",
+      "text": "What time did you close up the shop tonight?",
+      "target": { "characterId": "CH_dolores" },
+      "tier": 1,
+      "preconditions": {},
+      "effects": { "revealsClaimIds": ["CL_dolores_departtime"] },
+      "costsBudget": true
+    },
+    {
+      "questionId": "Q_dol_2",
+      "text": "We found the back door latch forced. Was that door locked when you left?",
+      "target": { "characterId": "CH_dolores" },
+      "tier": 2,
+      "preconditions": { "cluesHeld": ["C_backdoor_latch"] },
+      "effects": { "revealsClaimIds": ["CL_dolores_backdoor"], "unlocksQuestionIds": ["Q_dol_3"] },
+      "costsBudget": true
+    },
+    {
+      "questionId": "Q_dol_3",
+      "text": "You told me the back door was locked, but the latch was pried from the alley side. You never actually checked it, did you?",
+      "target": { "characterId": "CH_dolores" },
+      "tier": 3,
+      "preconditions": { "cluesHeld": ["C_backdoor_latch"] },
+      "effects": {},
+      "costsBudget": false,
+      "contradictionRef": { "claimId": "CL_dolores_backdoor", "evidenceIds": ["C_backdoor_latch"] }
+    },
+    {
+      "questionId": "Q_sid_1",
+      "text": "When did you leave the shop tonight?",
+      "target": { "characterId": "CH_sid" },
+      "tier": 1,
+      "preconditions": {},
+      "effects": { "revealsClaimIds": ["CL_sid_departtime"] },
+      "costsBudget": true
+    },
+    {
+      "questionId": "Q_sid_2",
+      "text": "This pawn ticket carries your name and a 21:48 stamp. Care to revise your evening?",
+      "target": { "characterId": "CH_sid" },
+      "tier": 2,
+      "preconditions": { "cluesHeld": ["C_pawnticket"] },
+      "effects": { "unlocksQuestionIds": ["Q_sid_3"] },
+      "costsBudget": true
+    },
+    {
+      "questionId": "Q_sid_3",
+      "text": "You said you were home by nine, but you pawned a watch at 21:48. What did you really see before you slipped out?",
+      "target": { "characterId": "CH_sid" },
+      "tier": 3,
+      "preconditions": { "cluesHeld": ["C_pawnticket"] },
+      "effects": { "revealsClaimIds": ["CL_sid_sawcar"] },
+      "costsBudget": false,
+      "contradictionRef": { "claimId": "CL_sid_departtime", "evidenceIds": ["C_pawnticket"] }
+    },
+    {
+      "questionId": "Q_etta_1",
+      "text": "Did you hear or see anything from the shop that night?",
+      "target": { "characterId": "CH_etta" },
+      "tier": 1,
+      "preconditions": {},
+      "effects": { "revealsClaimIds": ["CL_etta_crashtime", "CL_etta_seedolores"] },
+      "costsBudget": true
+    },
+    {
+      "questionId": "Q_etta_2",
+      "text": "The victim's watch stopped at 22:05. Could the crash you heard have been earlier than you thought?",
+      "target": { "characterId": "CH_etta" },
+      "tier": 2,
+      "preconditions": { "cluesHeld": ["C_stopped_watch"] },
+      "effects": {},
+      "costsBudget": true
+    },
+    {
+      "questionId": "Q_etta_3",
+      "text": "You placed the crash near eleven, but the coroner fixes death between 21:45 and 22:30 and the victim's watch stopped at 22:05. Your clock runs slow, doesn't it?",
+      "target": { "characterId": "CH_etta" },
+      "tier": 3,
+      "preconditions": { "cluesHeld": ["C_stopped_watch"] },
+      "effects": {},
+      "costsBudget": false,
+      "contradictionRef": { "claimId": "CL_etta_crashtime", "evidenceIds": ["C_stopped_watch", "F_tod"] }
+    },
+    {
+      "questionId": "Q_webb_1",
+      "text": "Where were you between nine and midnight?",
+      "target": { "characterId": "CH_webb" },
+      "tier": 1,
+      "preconditions": {},
+      "effects": { "revealsClaimIds": ["CL_webb_alibi", "CL_webb_debt_denial"] },
+      "costsBudget": true
+    },
+    {
+      "questionId": "Q_webb_2",
+      "text": "The loan ledger shows you into Hatcher for a heavy sum. Still say you were square with him?",
+      "target": { "characterId": "CH_webb" },
+      "tier": 2,
+      "preconditions": { "cluesHeld": ["C_ledger_debt"] },
+      "effects": { "unlocksQuestionIds": ["Q_webb_3"] },
+      "costsBudget": true
+    },
+    {
+      "questionId": "Q_webb_3",
+      "text": "Your prints are on the bottle that killed him, and the coroner puts the death at the very hour you claim you were across town. The Tiki Room story is finished, isn't it?",
+      "target": { "characterId": "CH_webb" },
+      "tier": 3,
+      "preconditions": { "cluesHeld": ["C_bottle_prints"] },
+      "effects": {},
+      "costsBudget": false,
+      "contradictionRef": { "claimId": "CL_webb_alibi", "evidenceIds": ["C_bottle_prints", "F_tod"] }
+    },
+    {
+      "questionId": "Q_me_1",
+      "text": "What does the autopsy tell us?",
+      "target": { "characterId": "CH_me" },
+      "tier": 1,
+      "preconditions": {},
+      "effects": { "revealsClaimIds": ["CL_me_tod", "CL_me_cause"] },
+      "costsBudget": false
+    },
+    {
+      "questionId": "Q_me_2",
+      "text": "Could this have been an accident or self-inflicted?",
+      "target": { "characterId": "CH_me" },
+      "tier": 2,
+      "preconditions": {},
+      "effects": { "revealsClaimIds": ["CL_me_defensive"] },
+      "costsBudget": false
+    }
+  ],
+
+  "corroborationMap": [
+    {
+      "factId": "F_dolores_departure",
+      "bearing": [
+        { "sourceType": "claim", "sourceId": "CL_dolores_departtime", "tag": "genuine" },
+        { "sourceType": "claim", "sourceId": "CL_etta_seedolores", "tag": "genuine" }
+      ]
+    },
+    {
+      "factId": "F_backdoor_state",
+      "bearing": [
+        { "sourceType": "clue", "sourceId": "C_backdoor_latch", "tag": "genuine" }
+      ]
+    },
+    {
+      "factId": "F_sid_presence",
+      "bearing": [
+        { "sourceType": "clue", "sourceId": "C_pawnticket", "tag": "genuine" }
+      ]
+    },
+    {
+      "factId": "F_webb_presence",
+      "bearing": [
+        { "sourceType": "claim", "sourceId": "CL_sid_sawcar", "tag": "genuine" }
+      ]
+    },
+    {
+      "factId": "F_webb_location_tod",
+      "bearing": [
+        { "sourceType": "clue", "sourceId": "C_bottle_prints", "tag": "genuine" },
+        { "sourceType": "claim", "sourceId": "CL_sid_sawcar", "tag": "genuine" }
+      ]
+    },
+    {
+      "factId": "F_webb_debt",
+      "bearing": [
+        { "sourceType": "clue", "sourceId": "C_ledger_debt", "tag": "genuine" }
+      ]
+    },
+    {
+      "factId": "F_crash_time",
+      "bearing": [
+        { "sourceType": "clue", "sourceId": "C_stopped_watch", "tag": "genuine" }
+      ]
+    },
+    {
+      "factId": "F_tod",
+      "bearing": [
+        { "sourceType": "clue", "sourceId": "C_stopped_watch", "tag": "genuine" },
+        { "sourceType": "claim", "sourceId": "CL_me_tod", "tag": "genuine" }
+      ]
+    }
+  ],
+
+  "meReport": {
+    "causeOfDeathFactId": "F_cause",
+    "timeOfDeathFactId": "F_tod",
+    "weaponClassFactId": "F_weapon",
+    "defensiveWoundsFactId": "F_defensive",
+    "toxicologyFactId": "F_tox"
+  },
+
+  "scoringSpec": {
+    "requiredEvidenceChain": [
+      { "kind": "fact", "id": "F_defensive" },
+      { "kind": "fact", "id": "F_cause" },
+      { "kind": "fact", "id": "F_tod" },
+      { "kind": "clue", "id": "C_bottle_prints" },
+      { "kind": "fact", "id": "F_webb_location_tod" },
+      { "kind": "clue", "id": "C_pawnticket" },
+      { "kind": "fact", "id": "F_webb_presence" },
+      { "kind": "clue", "id": "C_ledger_debt" },
+      { "kind": "fact", "id": "F_webb_debt" }
+    ],
+    "sufficientChainRule": "A sufficient accusation of Marcus Webb must establish that this was a homicide (F_defensive plus F_cause rule out accident, suicide, and natural causes), then place Webb at the scene during the ME time-of-death window (F_tod) using physical evidence (C_bottle_prints on the murder weapon, ideally reinforced by F_webb_presence via Sid's corrected sighting once C_pawnticket breaks his lie), and cite motive (F_webb_debt via C_ledger_debt). The prints on the weapon together with the time-of-death window are the minimum sufficient core; the Sid sighting and the debt strengthen the case but the core alone carries it.",
+    "unexplainedContradictionRule": "Every contradiction left unresolved at accusation counts against the case. Webb's alibi (CL_webb_alibi) must be broken by C_bottle_prints together with F_tod, or his Tiki Room story stands and the accusation fails. Sid's lie (CL_sid_departtime) should be cracked with C_pawnticket, since an unbroken lie keeps the 21:55 sighting hidden. Etta's mistaken time (CL_etta_crashtime) must be corrected to F_tod, or her 23:00 account spuriously argues for a death outside the window.",
+    "strengthHierarchy": [
+      "Physical evidence and Medical Examiner findings (for example C_bottle_prints and F_tod) outrank all testimony.",
+      "Testimony independently corroborated by two or more sources (for example F_dolores_departure) outranks a single statement.",
+      "A single uncorroborated statement is the weakest evidence and cannot, on its own, carry an accusation."
+    ]
+  }
+}

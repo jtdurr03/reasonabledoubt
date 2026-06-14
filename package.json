@@ -1,0 +1,22 @@
+{
+  "name": "reasonable-doubt-case-bible",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Reasonable Doubt: case bible schema, TypeScript types, reference fixture, and validator (step 1 of 10).",
+  "scripts": {
+    "validate": "tsx src/validate.ts",
+    "validate:fail": "tsx src/validate.ts fixtures/corrupted-homicide.case.json",
+    "typecheck": "tsc --noEmit",
+    "types:generate": "json2ts schema/case-bible.schema.json --output src/types/caseBible.generated.ts"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "json-schema-to-typescript": "^15.0.3",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
