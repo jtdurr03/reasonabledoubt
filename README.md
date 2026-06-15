@@ -499,20 +499,150 @@ delivery differing while the facts stay identical, the cache preventing duplicat
 calls, and the ME professional register. `integration.test.ts` bakes one real
 line and is skipped unless `ANTHROPIC_API_KEY` is set, so CI stays offline.
 
-## Out of scope (steps two, three, and four)
+## Step five: Engine A, the case generator
+
+Engine A generates the case bibles that were hand-fed until now. The governing
+decision: **the logic is deterministic, and the prose is the only thing the model
+touches.** Deterministic code owns the ground truth, every character's knowledge,
+every lie anchored to a refuting clue and every mistake to a correcting fact, the
+clue placements, the question gating, the scoring spec, and the intended solution
+chain. The model is only a content-fill pass that writes names, factualSpine
+prose, the title, location names, and clue discovery methods into slots the code
+already defined. The model never decides who did it, what is true, where a clue
+goes, what gates a question, or whether a case is solvable.
+
+Source lives under `src/engineA/`:
+
+| File | What it is |
+| --- | --- |
+| `template.ts` | The template type and the one homicide-perp template, as data. |
+| `rng.ts` | A seeded deterministic PRNG. |
+| `skeleton.ts` | Deterministic structural generation: truth, cast and traits, facts, anchored claims, clues, the question graph, the scoringSpec, and the intended solution chain. Placeholder prose only. |
+| `invariants.ts` | The structural invariant checker with named violations. |
+| `contentFill.ts` | The model slot-fill pass, reusing Engine B's client, forbidden from altering structure. |
+| `solve.ts` | Replays the intended plan through the runner rules (orchestrates `scoreVerdict`). |
+| `pipeline.ts` | The eight stages and the reject-and-retry loop. |
+| `cli.ts` | Generate a batch across a seed range. |
+
+### The pipeline (exact order)
+
+1. Deterministic skeleton from template plus seed.
+2. Schema validation of the structural bible.
+3. Invariant check. **Reject and reseed before any model spend.**
+4. Content fill (the first model spend; prose into defined slots).
+5. Comparator enrich (the baked contradiction matrix and corroboration map).
+6. Engine B bake (leak-guarded performed dialogue).
+7. Solvability guard (autosolve the intended chain under `rules.ts`).
+8. Final schema validation of the complete enriched bible.
+
+Steps 1 to 8 are wrapped in a reject-and-retry loop with a configurable cap. On
+the cap it throws a `GenerationError` naming the template and every seed tried,
+so a generation bug is reproducible rather than silent.
+
+### The solvability guard (non-negotiable)
+
+Because the generator builds the truth, it knows the intended solution chain by
+construction. After assembly, it replays that chain through the real `rules.ts`
+(`solve.ts`). If the case is not winnable from its own evidence (an unreachable
+refuter, an unsatisfiable confront precondition, a null case without enough
+corroboration), it is rejected and regenerated with a new seed. **No unfair case
+ships. The engine proves it can solve its own case before releasing it.**
+
+### Anchoring invariants (checked before any model spend)
+
+`invariants.ts` enforces, with named violations: every lie has a reachable
+refuter, every mistake has a reachable corrector, every gated question's
+preconditions are satisfiable along the intended path, the cited chain meets the
+scoringSpec under the strength hierarchy, null cases carry enough corroboration
+for a confident "no perp", and trait vectors are present and clamped with the ME
+and DA exempt. An unanchored lie or an unreachable refuter is a generation bug,
+not a valid case.
+
+### Seeding and reproducibility
+
+A seed produces a reproducible deterministic skeleton (same seed, byte-identical
+structure). The only nondeterministic part is the model content fill, which is
+frozen into the case once written, so a finished case file is fully reproducible.
+Models: the bible build (content fill) uses `claude-opus-4-8` (override with
+`ENGINE_A_FILL_MODEL`); the dialogue uses Engine B's defaults (Sonnet performer,
+Haiku verifier).
+
+### How to add a template
+
+A crime template is data, not code. Add a `CrimeTemplate` entry to `template.ts`
+(crime kind, required roles, location archetypes, the district / weapon / motive
+pools, resolution-class weights) and register it in `templates`. The skeleton,
+invariants, pipeline, and guard are template-agnostic. Null-case variants and the
+remaining templates are later data entries against this same interface.
+
+### Run commands
+
+```sh
+npm run generate                      # one homicide-perp case (needs ANTHROPIC_API_KEY)
+npm run generate -- homicide-perp 3 1 # three cases, starting at seed 1
+npm run gen-test                      # the offline Engine A suite
+```
+
+Generated cases land in `generated/` (git-ignored) as a `.case.json` plus a
+`.dialogue.json` sidecar, and play in the runner with
+`npm run play -- generated/<caseId>.case.json`.
+
+### Tests
+
+`npm run gen-test` runs `src/engineA/engineA.test.ts` fully offline with a mocked
+client: determinism (a fixed seed reproduces the skeleton), the invariant
+checker, solvability under `rules.ts` with placeholder prose, reject-and-retry
+(an orphaned refuter is rejected, retried, and logged with the template and
+seeds), schema validity at the structural and final stages, plant parity (a
+genuine corroboration, an anchored lie, an anchored mistake, and a time
+contradiction), and the full pipeline end to end with no network.
+
+### Deferred
+
+Collusion generation is held out of this step (its schema room exists but no
+collusion template is authored). The remaining nineteen templates and the
+null-case variants are later content, not new architecture.
+
+### Playtesting notes (real generated cases vs the hand fixture)
+
+I generated several cases with the live models (Opus 4.8 fill, Sonnet dialogue)
+and played them through the step-three runner. Honest findings:
+
+- **Solvable: yes, as reliably as the hand fixture.** Every generated case passes
+  autosolve and plays to a WIN end to end with performed dialogue, because the
+  template reuses the fixture's proven logical shape. The solvability guard is
+  doing its job: a case cannot ship unless the generator first wins it.
+- **Voiced well.** Witnesses read distinctly: the clerk is precise ("I locked up
+  at twenty-one thirty-nine, not a minute before or after"), the liar is terse and
+  defensive, the hazy witness is vague on the time, and the ME is clinical. This
+  matches the fixture's feel.
+- **Interesting: less than the fixture, and that is the expected signal.** Because
+  there is one template that mirrors the fixture exactly, every generated case has
+  the same beats in the same order (same clue types, same question flow); only the
+  names, times, district, weapon, and motive vary. Across cases they feel
+  structurally identical. The fix is to enrich the template (more clue variety,
+  the second optional witness area, motives expressed differently), not the
+  engine, exactly as the task predicts.
+- **Two issues found in playtesting, both fixed.** (1) `renderStated` dropped
+  object attributes, so the clerk's "the back door was locked" lost the "locked"
+  part and the model wrote a confused line. Fixed: object attributes are now
+  included in the content the model phrases. (2) Names repeated within a case
+  (several "Margaret" in one cast), because each name was an independent model
+  call with the same generic prompt. Fixed: each name prompt now lists the names
+  already assigned in that case and forbids reuse. Names are pure flavor and never
+  affected correctness.
+
+## Out of scope (steps five onward)
 
 The following belong to later steps and are deliberately **not** built here:
 
-- the case generator (Engine A, step five): this step runs against the hand
-  fixture and never generates case content;
+- collusion generation (deferred) and the remaining templates (later content);
 - any Unity, UI, or graphics (step six onward): the runner is text only and
   `rules.ts` carries no I/O so the port can mirror it;
 - the dramatized DA scene and the collusion higher bar (step ten), which reuse
   this step's `scoreVerdict` rather than replacing it.
 
-The comparator computes distance, severity, and the structural corroboration and
-contradiction data, reading authored veracity only to classify corroboration. The
-runner decides visibility, availability, budget, and the verdict. Neither
-reimplements the other: the runner reads the comparator's baked outputs. If a
-change starts to recompute comparisons in the runner, or to perform witness lines
-in character, it has left scope.
+The model never makes a logical decision: structure is fully deterministic from
+the seed, and content fill only writes prose into defined slots. If the model is
+being asked who is guilty, where a clue goes, what gates a question, or whether a
+case is solvable, that is a bug in the prompt design, not a feature.

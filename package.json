@@ -11,6 +11,8 @@
     "play": "tsx src/runner/cli.ts",
     "autosolve": "tsx src/runner/autosolve.ts",
     "bake": "tsx src/engineB/bake.ts",
+    "generate": "tsx src/engineA/cli.ts",
+    "gen-test": "vitest run src/engineA",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "types:generate": "json2ts schema/case-bible.schema.json --output src/types/caseBible.generated.ts"

@@ -12,3 +12,6 @@ transcripts/
 # Engine B generated dialogue (regenerate with `npm run bake`) and secrets
 fixtures/*.dialogue.json
 .env
+
+# Engine A generated cases (regenerate with `npm run generate`)
+generated/
